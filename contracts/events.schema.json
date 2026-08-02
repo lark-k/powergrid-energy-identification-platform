@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://powergrid.internal/contracts/events.schema.json",
+  "title": "PlatformEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "request_id", "type", "occurred_at", "station_id", "data"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "request_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "type": {
+      "type": "string",
+      "enum": [
+        "main_switch.minute.arrived",
+        "inference.completed",
+        "inference.failed",
+        "snapshot.updated",
+        "feedback.arrived",
+        "history.corrected",
+        "model.deployment.changed",
+        "model.health.changed",
+        "training.updated",
+        "node.status.updated",
+        "quality.updated"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "station_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "data": { "type": "object" }
+  }
+}

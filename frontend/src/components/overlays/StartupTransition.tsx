@@ -55,7 +55,7 @@ export function StartupTransition({ ready, reducedEffects = false, onComplete }:
         <div className="startup-spectrum" aria-hidden="true">
           <i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i />
         </div>
-        <h1>台区光储充辨识与光伏功率分离系统</h1>
+        <h1>台区能源辨识与光伏功率分离系统</h1>
         <div className={`startup-progress ${ready ? "is-ready" : ""}`} aria-hidden="true"><span /></div>
         <div className="startup-statuses">
           <span className="is-active"><Database weight="duotone" />数据链路接入</span>

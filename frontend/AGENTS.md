@@ -15,7 +15,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Keep the data layer replaceable through service adapters so mock data can later switch to REST/WebSocket/SSE without changing UI components.
 - Maintain a balanced exhibition density: vivid aurora atmosphere and event-bound motion, but no card mosaic, explanatory paragraphs, decorative HUD rings, or large topology competing with the chart.
 - Visual upgrades should increase chromatic depth, glass hierarchy, energy-flow highlights, and event-bound bloom while keeping the chart dominant and the layout orderly.
-- Storage and charger display independent recognition scores only; never label them as separated power.
+- Energy station and charger display independent recognition scores only; never label them as separated power.
 - Corrected PV is visible only for historical periods with arrived feedback; future or not-yet-arrived substation data must stay absent and read `等待回传`.
 - Keep the four-stage business pipeline visible above the KPI strip: data collection, offline model training, online inference, and result visualization. Training must show its last completed model/version rather than implying continuous online training.
 - Keep the homepage pipeline compact. Clicking data collection or model training opens a dedicated process-visualization cockpit; detailed process content belongs in that second layer so the main chart remains visually dominant.

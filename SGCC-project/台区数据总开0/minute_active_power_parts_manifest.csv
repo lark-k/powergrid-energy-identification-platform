@@ -1,0 +1,14 @@
+﻿part_index,file,archive_checkpoint,minute_rows,complete_rows,first_minute,last_minute,is_final_part
+1,/data0/renzhengju/总开0/minute_active_power_part_0001.csv,100,1006,902,2025-12-03 15:23:00,2025-12-04 08:08:00,0
+2,/data0/renzhengju/总开0/minute_active_power_part_0002.csv,200,1007,900,2025-12-04 08:09:00,2025-12-05 00:55:00,0
+3,/data0/renzhengju/总开0/minute_active_power_part_0003.csv,300,1007,903,2025-12-05 00:56:00,2025-12-05 17:42:00,0
+4,/data0/renzhengju/总开0/minute_active_power_part_0004.csv,400,1007,900,2025-12-05 17:43:00,2025-12-06 10:29:00,0
+5,/data0/renzhengju/总开0/minute_active_power_part_0005.csv,500,1007,903,2025-12-06 10:30:00,2025-12-07 03:16:00,0
+6,/data0/renzhengju/总开0/minute_active_power_part_0006.csv,600,1009,901,2025-12-07 03:17:00,2025-12-07 20:05:00,0
+7,/data0/renzhengju/总开0/minute_active_power_part_0007.csv,700,1015,900,2025-12-07 20:06:00,2025-12-08 13:00:00,0
+8,/data0/renzhengju/总开0/minute_active_power_part_0008.csv,800,1017,902,2025-12-08 13:01:00,2025-12-09 05:57:00,0
+9,/data0/renzhengju/总开0/minute_active_power_part_0009.csv,900,1026,901,2025-12-09 05:58:00,2025-12-09 23:03:00,0
+10,/data0/renzhengju/总开0/minute_active_power_part_0010.csv,1000,1032,903,2025-12-09 23:04:00,2025-12-10 16:15:00,0
+11,/data0/renzhengju/总开0/minute_active_power_part_0011.csv,1100,1036,901,2025-12-10 16:16:00,2025-12-11 09:31:00,0
+12,/data0/renzhengju/总开0/minute_active_power_part_0012.csv,1200,1044,903,2025-12-11 09:32:00,2025-12-12 02:55:00,0
+13,/data0/renzhengju/总开0/minute_active_power_part_0013.csv,1238,399,342,2025-12-12 02:56:00,2025-12-12 09:34:00,1

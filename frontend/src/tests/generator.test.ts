@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import { DEMO_DATASET, snapshotAt } from "../mocks/generator";
 
 const localAt = (hour: number, minute: number, second = 0) => {
-  const date = new Date(DEMO_DATASET.mainStation.at(-1)!.event_time);
+  const date = new Date(DEMO_DATASET.mainSwitch.at(-1)!.event_time);
   date.setHours(hour, minute, second, 0);
   return date;
 };
 const ninthBatchId = DEMO_DATASET.feedbackBatches.find((batch) => batch.arrival_time === localAt(14, 20, 35).toISOString())!.batch_id;
 
 describe("台区演示数据的时间语义", () => {
-  it("生成完整的近 7 天分钟级主站数据", () => {
-    expect(DEMO_DATASET.mainStation).toHaveLength(7 * 1440);
-    const first = new Date(DEMO_DATASET.mainStation[0].event_time);
-    const last = new Date(DEMO_DATASET.mainStation.at(-1)!.event_time);
+  it("生成完整的近 7 天分钟级总开数据", () => {
+    expect(DEMO_DATASET.mainSwitch).toHaveLength(7 * 1440);
+    const first = new Date(DEMO_DATASET.mainSwitch[0].event_time);
+    const last = new Date(DEMO_DATASET.mainSwitch.at(-1)!.event_time);
     expect([first.getHours(), first.getMinutes()]).toEqual([0, 0]);
     expect([last.getHours(), last.getMinutes()]).toEqual([23, 59]);
     expect((last.getTime() - first.getTime()) / 60_000).toBe(7 * 1440 - 1);

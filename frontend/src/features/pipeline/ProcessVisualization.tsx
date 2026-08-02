@@ -107,8 +107,8 @@ function ProcessSteps({
 function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }) {
   const onlineSources = telemetry.sources.filter((source) => source.status === "online").length;
   const totalReceived = telemetry.sources.reduce((sum, source) => sum + source.received_count, 0);
-  const minuteSource = telemetry.sources.find((source) => source.source_id === "main-station");
-  const feedbackSource = telemetry.sources.find((source) => source.source_id === "pv-substations");
+  const minuteSource = telemetry.sources.find((source) => source.source_id === "main_switch");
+  const feedbackSource = telemetry.sources.find((source) => source.source_id === "pv_feedback" || source.source_id === "pv-substations");
   const signalOption = useMemo<EChartsOption>(() => {
     const points = telemetry.signal;
     return {
@@ -122,7 +122,7 @@ function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }
         formatter: (items: unknown) => {
           const list = items as Array<{ axisValueLabel: string; value: number }>;
           const item = list[0];
-          return item ? `${item.axisValueLabel}<br/>主站功率　${Number(item.value).toLocaleString()} kW` : "";
+          return item ? `${item.axisValueLabel}<br/>总开功率　${Number(item.value).toLocaleString()} kW` : "";
         },
       },
       xAxis: {
@@ -180,8 +180,8 @@ function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }
           </div>
         </section>
         <section className="process-panel signal-panel">
-          <header><span><Pulse weight="duotone" />主站原始信号</span><small>LAST 42 MINUTES</small></header>
-          <EChart option={signalOption} className="process-chart" ariaLabel="最近四十二分钟主站原始功率信号" />
+          <header><span><Pulse weight="duotone" />总开原始信号</span><small>LAST 42 MINUTES</small></header>
+          <EChart option={signalOption} className="process-chart" ariaLabel="最近四十二分钟总开原始功率信号" />
         </section>
         <section className="process-panel event-panel">
           <header><span><ClockCounterClockwise weight="duotone" />实时事件流</span><small>EVENT STREAM</small></header>
@@ -279,6 +279,7 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [collectionTelemetry, setCollectionTelemetry] = useState<CollectionProcessTelemetry | null>(null);
   const [trainingRun, setTrainingRun] = useState<TrainingProcessRun | null>(null);
+  const [trainingLoaded, setTrainingLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -293,6 +294,7 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
   useEffect(() => {
     let disposed = false;
     setLoadError(null);
+    if (mode === "training") setTrainingLoaded(false);
 
     if (mode === "collection") {
       void processAdapter.getCollectionProcess(snapshot.station_id, new Date(snapshot.now))
@@ -308,7 +310,7 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
     }
 
     void processAdapter.getLatestTrainingRun(snapshot.station_id)
-      .then((run) => { if (!disposed) setTrainingRun(run); })
+      .then((run) => { if (!disposed) { setTrainingRun(run); setTrainingLoaded(true); } })
       .catch(() => { if (!disposed) setLoadError("训练过程接口暂不可用"); });
     return () => { disposed = true; };
   }, [mode, snapshot.now, snapshot.station_id]);
@@ -353,6 +355,8 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
             <CollectionView telemetry={collectionTelemetry} />
           ) : !isCollection && trainingRun ? (
             <TrainingView run={trainingRun} />
+          ) : !isCollection && trainingLoaded ? (
+            <div className="process-load-state"><Pulse weight="duotone" /><b>暂无真实训练运行记录</b><span>training_epoch 为空，因此不绘制或推测训练曲线</span></div>
           ) : (
             <div className="process-load-state"><Pulse weight="duotone" /><b>正在连接过程数据</b><span>{isCollection ? "订阅采集遥测流…" : "读取最近一次训练运行…"}</span></div>
           )}

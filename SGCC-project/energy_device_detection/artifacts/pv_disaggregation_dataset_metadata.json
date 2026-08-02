@@ -1,0 +1,296 @@
+{
+  "dataset_path": "C:\\Users\\YCQ\\Desktop\\renzhengju\\energy_device_detection\\artifacts\\pv_disaggregation_dataset.npz",
+  "seed": 20260729,
+  "task": "same-minute causal sequence-to-point PV disaggregation; the separated value at t uses observations from t-239 through t and is not a future forecast",
+  "window_size_minutes": 240,
+  "train_stride_minutes": 1,
+  "evaluation_stride_minutes": 1,
+  "active_threshold_kw": 0.5,
+  "min_coverage_ratio": 0.1,
+  "max_interpolation_gap_minutes": 3,
+  "target": {
+    "training_target": "max(-pv_active_power_kw, 0)",
+    "output_conversion": "separated_pv_active_power_kw = -separated_pv_generation_kw",
+    "target_scale_kw": 23.422931671142578
+  },
+  "feature_names": [
+    "active_power_kw",
+    "phase_a_power_kw",
+    "phase_b_power_kw",
+    "phase_c_power_kw",
+    "active_power_delta_1m_kw",
+    "minute_of_day_sin",
+    "minute_of_day_cos"
+  ],
+  "role_audit": {
+    "train": {
+      "main_a": {
+        "inferred_role": "aggregate_main",
+        "rows": 11767,
+        "q01_kw": -20.83429038166,
+        "q05_kw": -16.131585019,
+        "q25_kw": -0.417850555,
+        "median_kw": 1.822379355,
+        "q75_kw": 3.0796914429999998,
+        "q95_kw": 25.2099894204,
+        "q99_kw": 29.07139042716,
+        "midday_mean_kw": -6.496891835686437,
+        "night_mean_kw": 4.707229494274167,
+        "fraction_at_or_above_1kw": 0.7131809297187048
+      },
+      "pv_a": {
+        "inferred_role": "photovoltaic",
+        "rows": 11705,
+        "q01_kw": -23.13911373992,
+        "q05_kw": -19.0960442118,
+        "q25_kw": -4.033188878,
+        "median_kw": -0.011156805,
+        "q75_kw": -0.005300013,
+        "q95_kw": 0.0029032453999999993,
+        "q99_kw": 0.010050279999999983,
+        "midday_mean_kw": -10.929645838974857,
+        "night_mean_kw": -0.006236129224583334,
+        "fraction_at_or_above_1kw": 0.0
+      },
+      "energy_station_a": {
+        "inferred_role": "energy_station_feeder",
+        "rows": 11767,
+        "q01_kw": 0.500008351,
+        "q05_kw": 1.1639896692000002,
+        "q25_kw": 1.6341646239999998,
+        "median_kw": 2.583345899,
+        "q75_kw": 3.1374727924999997,
+        "q95_kw": 26.93564667049999,
+        "q99_kw": 29.32418081614,
+        "midday_mean_kw": 4.579073636556479,
+        "night_mean_kw": 4.680746005579583,
+        "fraction_at_or_above_1kw": 0.9632021755757627
+      }
+    },
+    "validation_and_test": {
+      "main_b": {
+        "inferred_role": "aggregate_main",
+        "rows": 12612,
+        "q01_kw": -18.46784821463,
+        "q05_kw": -10.779268426249999,
+        "q25_kw": 1.7570381175,
+        "median_kw": 3.120973511,
+        "q75_kw": 4.6382672295,
+        "q95_kw": 27.91312763905,
+        "q99_kw": 29.99222640625,
+        "midday_mean_kw": -2.6902874940904167,
+        "night_mean_kw": 8.245756505824444,
+        "fraction_at_or_above_1kw": 0.7842530922930543
+      },
+      "pv_b": {
+        "inferred_role": "photovoltaic",
+        "rows": 12616,
+        "q01_kw": -20.764302527549997,
+        "q05_kw": -14.661771478,
+        "q25_kw": -2.3369112860000003,
+        "median_kw": -0.0092611195,
+        "q75_kw": -0.0033988625,
+        "q95_kw": 0.00530028,
+        "q99_kw": 0.012339430850000008,
+        "midday_mean_kw": -9.591521774280418,
+        "night_mean_kw": -0.004737061527232308,
+        "fraction_at_or_above_1kw": 0.0
+      },
+      "energy_station_b": {
+        "inferred_role": "energy_station_feeder",
+        "rows": 12613,
+        "q01_kw": 0.84590144388,
+        "q05_kw": 1.7220303154,
+        "q25_kw": 2.731325725,
+        "median_kw": 3.149950782,
+        "q75_kw": 5.090568397,
+        "q95_kw": 28.1963158892,
+        "q99_kw": 29.79041331859999,
+        "midday_mean_kw": 5.5127348527925,
+        "night_mean_kw": 8.22834594100037,
+        "fraction_at_or_above_1kw": 0.9835883612146198
+      }
+    }
+  },
+  "normalization": {
+    "mean": {
+      "active_power_kw": 1.5161508321762085,
+      "phase_a_power_kw": 0.7382152676582336,
+      "phase_b_power_kw": 0.2751017212867737,
+      "phase_c_power_kw": 0.5028339624404907,
+      "active_power_delta_1m_kw": 0.002051436807960272,
+      "minute_of_day_sin": -0.003263206919655204,
+      "minute_of_day_cos": -0.015029420144855976
+    },
+    "std": {
+      "active_power_kw": 9.306243896484375,
+      "phase_a_power_kw": 3.0079309940338135,
+      "phase_b_power_kw": 3.1453399658203125,
+      "phase_c_power_kw": 3.1570990085601807,
+      "active_power_delta_1m_kw": 5.2086334228515625,
+      "minute_of_day_sin": 0.7025340795516968,
+      "minute_of_day_cos": 0.711483895778656
+    }
+  },
+  "periods": {
+    "train": {
+      "source": "202511050004 总开 + 202511050001 光伏 + 202511250005 能源站",
+      "rows": 11705,
+      "first": "2025-11-25 11:17:00",
+      "last": "2025-12-03 14:21:00",
+      "interpolation": {
+        "main": {
+          "rows_before_reindex": 11767,
+          "rows_in_full_minute_span": 11767,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 10:15:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "pv": {
+          "rows_before_reindex": 11705,
+          "rows_in_full_minute_span": 11705,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 11:17:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "energy_station": {
+          "rows_before_reindex": 11767,
+          "rows_in_full_minute_span": 11767,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 10:15:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "aligned_rows": 11705
+      }
+    },
+    "validation_and_test": {
+      "source": "台区数据总开0 + 台区数据光伏0 + 台区数据能源站0",
+      "rows": 12611,
+      "first": "2025-12-03 15:24:00",
+      "last": "2025-12-12 09:34:00",
+      "interpolation": {
+        "main": {
+          "rows_before_reindex": 12612,
+          "rows_in_full_minute_span": 12612,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 1,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 1,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:23:00",
+          "source_last_minute": "2025-12-12 09:34:00"
+        },
+        "pv": {
+          "rows_before_reindex": 12616,
+          "rows_in_full_minute_span": 12620,
+          "missing_minutes": 4,
+          "low_coverage_minutes": 6,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 10,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:20:00",
+          "source_last_minute": "2025-12-12 09:39:00"
+        },
+        "energy_station": {
+          "rows_before_reindex": 12613,
+          "rows_in_full_minute_span": 12617,
+          "missing_minutes": 4,
+          "low_coverage_minutes": 7,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 11,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:24:00",
+          "source_last_minute": "2025-12-12 09:40:00"
+        },
+        "aligned_rows": 12611
+      },
+      "split": "first 40% validation, middle 20% buffer, last 40% test"
+    }
+  },
+  "splits": [
+    {
+      "name": "train",
+      "samples": 11466,
+      "shape": [
+        11466,
+        240,
+        7
+      ],
+      "first_target_minute": "2025-11-25T15:16:00.000000000",
+      "last_target_minute": "2025-12-03T14:21:00.000000000",
+      "active_rate": 0.3482469916343689,
+      "generation_kw_mean": 3.225010395050049,
+      "generation_kw_active_mean": 9.231874465942383,
+      "generation_kw_max": 24.910213470458984
+    },
+    {
+      "name": "validation",
+      "samples": 4805,
+      "shape": [
+        4805,
+        240,
+        7
+      ],
+      "first_target_minute": "2025-12-03T19:23:00.000000000",
+      "last_target_minute": "2025-12-07T03:27:00.000000000",
+      "active_rate": 0.3388137221336365,
+      "generation_kw_mean": 3.093191385269165,
+      "generation_kw_active_mean": 9.10590648651123,
+      "generation_kw_max": 26.10957908630371
+    },
+    {
+      "name": "test",
+      "samples": 4795,
+      "shape": [
+        4795,
+        240,
+        7
+      ],
+      "first_target_minute": "2025-12-09T01:29:00.000000000",
+      "last_target_minute": "2025-12-12T09:34:00.000000000",
+      "active_rate": 0.3086548447608948,
+      "generation_kw_mean": 2.3709352016448975,
+      "generation_kw_active_mean": 7.640957355499268,
+      "generation_kw_max": 21.611045837402344
+    }
+  ],
+  "known_limitations": [
+    "Only two acquisition periods from one project are available.",
+    "Total-only PV separation is not uniquely identifiable when PV, energy station, charger, and other loads change simultaneously.",
+    "Charger-feeder data starts after the synchronized main/PV/energy-station periods; timestamp overlap is zero, so charger interference is neither trained nor validated.",
+    "Missing minutes and minutes below the configured coverage ratio are linearly interpolated only when the bounded gap does not exceed the configured limit.",
+    "PV targets must have original main and PV readings; interpolated target minutes are excluded to preserve causal evaluation.",
+    "Partially covered minutes at or above the configured threshold retain the mean of their available raw samples.",
+    "No irradiance, weather, or seasonal coverage is available."
+  ]
+}

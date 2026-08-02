@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type { EChartsOption } from "echarts";
-import { COLOR, SYSTEM_CONFIG } from "../../config/system";
+import { COLOR } from "../../config/system";
 import type { SeparationResult, StationSnapshot, TimeRange } from "../../types/domain";
 import { dateTimeText, percentText, powerText, timeText } from "../../utils/format";
 import { EChart } from "../../components/charts/EChart";
+import { powerAxisScale, powerAxisTickText, visibleMainSwitchPoints, visibleSeparationResults } from "./chartData";
 
 interface Props { snapshot: StationSnapshot; range: TimeRange; onSelect: (result: SeparationResult) => void }
 const line = (name: string, color: string, width = 1.6) => ({ name, type: "line" as const, showSymbol: false, smooth: 0.22,
@@ -11,12 +12,14 @@ const line = (name: string, color: string, width = 1.6) => ({ name, type: "line"
 
 export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
   const visible = useMemo(() => {
-    const rangeMinutes = SYSTEM_CONFIG.timeRanges[range];
-    const start = new Date(snapshot.now).getTime() - rangeMinutes * 60_000;
-    return snapshot.separation_results.filter((row) => new Date(row.event_time).getTime() >= start);
+    return visibleSeparationResults(snapshot, range);
+  }, [snapshot, range]);
+  const mainSwitch = useMemo(() => {
+    return visibleMainSwitchPoints(snapshot, range);
   }, [snapshot, range]);
 
   const resultMap = useMemo(() => new Map(visible.map((row) => [new Date(row.event_time).getTime(), row])), [visible]);
+  const minuteMap = useMemo(() => new Map(mainSwitch.map((point) => [new Date(point.event_time).getTime(), point])), [mainSwitch]);
   const feedback = useMemo(() => {
     const grouped = new Map<string, number>();
     snapshot.substation_points.forEach((point) => grouped.set(point.period_start, (grouped.get(point.period_start) ?? 0) + point.pv_value));
@@ -28,7 +31,12 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
   const correctedEnd = latestBatch ? new Date(latestBatch.coverage_end).getTime() : visible[0] ? new Date(visible[0].event_time).getTime() : now;
   const realtimeStart = now - 5 * 60_000;
   const isLongRange = range === "24h" || range === "7d";
-  const waitingLabelY = Math.max(1, ...visible.map((row) => row.total_power_kw)) * 1.045;
+  const waitingLabelY = Math.max(1, ...mainSwitch.map((point) => point.active_power_kw), ...visible.map((row) => row.total_power_kw)) * 1.045;
+  const yAxisScale = useMemo(() => powerAxisScale([
+    ...mainSwitch.map((point) => point.active_power_kw),
+    ...visible.flatMap((row) => [row.total_power_kw, row.initial_pv_kw, row.corrected_pv_kw, row.station_feedback_value, row.remaining_load_kw]),
+    ...feedback.map((point) => point[1]),
+  ]), [mainSwitch, visible, feedback]);
   const axisTimeText = (value: number) => {
     const date = new Date(value);
     if (range !== "7d") return timeText(date);
@@ -44,7 +52,7 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
     legend: {
       top: 47, left: 10, itemWidth: 24, itemHeight: 3, icon: "roundRect", selectedMode: true,
       textStyle: { color: "#cce5f0", fontSize: 11, fontWeight: 550, textShadowBlur: 5, textShadowColor: "rgba(0,8,20,.9)" }, itemGap: 22,
-      data: ["台区总有功", "初始光伏", "校正后光伏", "分站反馈", "剩余负荷"],
+      data: ["总开有功", "初始光伏", "校正后光伏", "分站反馈", "剩余负荷"],
     },
     tooltip: {
       trigger: "axis", confine: true, backgroundColor: "rgba(3, 12, 28, .97)", borderColor: "rgba(86, 224, 255, .58)",
@@ -53,7 +61,10 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
       formatter: (items: unknown) => {
         const array = items as Array<{ axisValue: number }>;
         const time = array[0]?.axisValue; const row = resultMap.get(Number(time));
-        if (!row) return "";
+        const minute = minuteMap.get(Number(time));
+        if (!row) return minute
+          ? `<div class="chart-tip"><b>${dateTimeText(minute.event_time)}</b><span>光伏分离结果尚未生成</span></div><div class="tip-grid"><i>总开有功</i><em>${powerText(minute.active_power_kw)} kW</em><i>数据质量</i><em>${minute.quality_flag}</em></div>`
+          : "";
         const batch = snapshot.feedback_batches.find((item) => item.batch_id === row.batch_id);
         return `<div class="chart-tip"><b>${dateTimeText(row.event_time)}</b><span>${row.result_status}</span></div>
           <div class="tip-grid"><i>生成时间</i><em>${timeText(row.separation_time, true)}</em><i>到达时间</i><em>${batch ? timeText(batch.arrival_time, true) : "等待回传"}</em>
@@ -64,14 +75,15 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
       },
     },
     xAxis: {
-      type: "time", min: visible[0] ? new Date(visible[0].event_time).getTime() : undefined, max: now + 20 * 60_000,
+      type: "time", min: mainSwitch[0] ? new Date(mainSwitch[0].event_time).getTime() : visible[0] ? new Date(visible[0].event_time).getTime() : undefined, max: now + 20 * 60_000,
       axisLine: { lineStyle: { color: "rgba(111,186,228,.34)" } }, axisTick: { show: false },
       axisLabel: { color: "#b7d2e0", fontSize: 11, fontWeight: 550, formatter: (value: number) => axisTimeText(value) },
       splitLine: { show: true, lineStyle: { color: "rgba(92,164,205,.105)", type: "dashed" } },
     },
     yAxis: {
-      type: "value", name: "功率 (kW)", min: -2000, nameTextStyle: { color: "#bed6e3", fontSize: 11, fontWeight: 600, padding: [0, 0, 6, 0] },
-      axisLabel: { color: "#b7d2e0", fontSize: 11, fontWeight: 550, formatter: (value: number) => value.toLocaleString() },
+      type: "value", name: "功率 (kW)", min: yAxisScale.min, max: yAxisScale.max, interval: yAxisScale.interval,
+      nameTextStyle: { color: "#bed6e3", fontSize: 11, fontWeight: 600, padding: [0, 0, 6, 0] },
+      axisLabel: { color: "#b7d2e0", fontSize: 11, fontWeight: 550, formatter: powerAxisTickText },
       splitLine: { lineStyle: { color: "rgba(92,164,205,.11)" } }, axisLine: { show: false }, axisTick: { show: false },
     },
     dataZoom: [{ type: "inside", xAxisIndex: 0, filterMode: "none" }, { type: "slider", height: 8, bottom: 8, borderColor: "transparent",
@@ -81,7 +93,7 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
       style: { text: "等待反馈区", fill: "#ffd584", font: "700 12px HarmonyOS Sans SC, Microsoft YaHei, sans-serif", backgroundColor: "rgba(42,28,9,.86)", borderColor: "rgba(255,193,92,.58)", borderWidth: 1, borderRadius: 3, padding: [4, 7], shadowBlur: 10, shadowColor: "rgba(255,184,77,.28)" },
     }] : [],
     series: [
-      { ...line("台区总有功", "#e5f6ff", 1.9), data: visible.map((row) => [new Date(row.event_time).getTime(), row.total_power_kw]),
+      { ...line("总开有功", "#e5f6ff", 1.9), data: mainSwitch.map((point) => [new Date(point.event_time).getTime(), point.active_power_kw]),
         sampling: sevenDaySampling,
         areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(151,220,255,.34)" }, { offset: .42, color: "rgba(58,120,255,.12)" }, { offset: 1, color: "rgba(15,74,124,.01)" }] } },
         markArea: { silent: true, label: { show: true, position: "insideTop", fontSize: 15, fontWeight: 700, padding: [5, 10], borderRadius: 3, textShadowBlur: 8, textShadowColor: "rgba(0,8,20,.9)" }, data: [
@@ -105,7 +117,7 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
         itemStyle: { color: "rgba(0,0,0,0)" }, data: [[(correctedEnd + realtimeStart) / 2, waitingLabelY]],
         label: { show: true, formatter: "等待反馈区", position: "bottom" as const, distance: 10, color: "#ffd584", fontSize: 13, fontWeight: 700, backgroundColor: "rgba(42,28,9,.86)", borderColor: "rgba(255,193,92,.58)", borderWidth: 1, borderRadius: 3, padding: [4, 7], textShadowBlur: 10, textShadowColor: "rgba(255,184,77,.3)" } }] : []),
     ],
-  }), [visible, feedback, now, correctedEnd, realtimeStart, isLongRange, waitingLabelY, resultMap, snapshot, range]);
+  }), [visible, mainSwitch, feedback, now, correctedEnd, realtimeStart, isLongRange, waitingLabelY, yAxisScale, resultMap, minuteMap, snapshot, range]);
 
   const handleClick = useCallback((params: unknown) => {
     const point = params as { data?: [number, number] }; const timestamp = Number(point.data?.[0]);

@@ -1,10 +1,11 @@
 import { SYSTEM_CONFIG } from "../config/system";
 import { snapshotAt } from "../mocks/generator";
 import type { CollectionProcessTelemetry, StationSnapshot, TrainingProcessRun } from "../types/domain";
+import { apiRequest, authHeaders } from "./http";
 
 export interface ProcessDataAdapter {
   getCollectionProcess(stationId: string, at?: Date): Promise<CollectionProcessTelemetry>;
-  getLatestTrainingRun(stationId: string): Promise<TrainingProcessRun>;
+  getLatestTrainingRun(stationId: string): Promise<TrainingProcessRun | null>;
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void): () => void;
 }
 
@@ -20,8 +21,8 @@ export const collectionProcessFromSnapshot = (snapshot: StationSnapshot): Collec
     updated_at: snapshot.quality.last_checked_at,
     sources: [
       {
-        source_id: "main-station",
-        name: "主站计量",
+        source_id: "main_switch",
+        name: "总开计量",
         cadence: "1 min",
         fields: ["功率", "电压", "电流"],
         received_count: snapshot.minute_points.length,
@@ -55,12 +56,13 @@ export const collectionProcessFromSnapshot = (snapshot: StationSnapshot): Collec
     events: [
       { event_id: "quality", at: snapshot.quality.last_checked_at, label: "质量校验完成", detail: `完整率 ${(snapshot.quality.completeness_ratio * 100).toFixed(1)}%`, level: "success" },
       { event_id: "substation", at: latestNode?.latest_arrival_time ?? snapshot.now, label: "分站批次接入", detail: `${snapshot.substation_points.length.toLocaleString()} 条已归档`, level: "info" },
-      { event_id: "main-station", at: latestMinute?.event_time ?? snapshot.now, label: "主站分钟数据到达", detail: "event_time 已对齐", level: "info" },
+      { event_id: "main_switch", at: latestMinute?.event_time ?? snapshot.now, label: "总开分钟数据到达", detail: "event_time 已对齐", level: "info" },
     ],
   };
 };
 
 export const trainingProcessFromSnapshot = (snapshot: StationSnapshot): TrainingProcessRun => {
+  if (!snapshot.training) throw new Error("Mock snapshot must contain a training summary");
   const completedAt = new Date(snapshot.training.completed_at);
   const startedAt = new Date(completedAt.getTime() - 28 * 60_000);
   const target = snapshot.training.validation_score;
@@ -127,9 +129,7 @@ class HttpProcessAdapter implements ProcessDataAdapter {
   constructor(private readonly baseUrl: string) {}
 
   private async request<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error(`Process API request failed: ${response.status}`);
-    return response.json() as Promise<T>;
+    return apiRequest<T>(this.baseUrl, path);
   }
 
   getCollectionProcess(stationId: string) {
@@ -137,13 +137,53 @@ class HttpProcessAdapter implements ProcessDataAdapter {
   }
 
   getLatestTrainingRun(stationId: string) {
-    return this.request<TrainingProcessRun>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs/latest`);
+    return this.request<TrainingProcessRun>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs/latest`)
+      .catch((error: unknown) => {
+        if (typeof error === "object" && error && "status" in error && error.status === 404) return null;
+        throw error;
+      });
   }
 
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void) {
-    const stream = new EventSource(`${this.baseUrl}/api/v1/stations/${encodeURIComponent(stationId)}/process/collection/stream`);
-    stream.addEventListener("telemetry", (event) => onTelemetry(JSON.parse((event as MessageEvent<string>).data) as CollectionProcessTelemetry));
-    return () => stream.close();
+    const controller = new AbortController();
+    let retry = 0;
+    let retryTimer: number | null = null;
+    const connect = async (): Promise<void> => {
+      try {
+        const response = await fetch(`${this.baseUrl}/api/v1/stations/${encodeURIComponent(stationId)}/process/collection/stream`, {
+          headers: { Accept: "text/event-stream", ...authHeaders() },
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
+        if (!response.ok || !response.body) throw new Error(`SSE ${response.status}`);
+        retry = 0;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (!controller.signal.aborted) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true }).replaceAll("\r\n", "\n");
+          let boundary = buffer.indexOf("\n\n");
+          while (boundary >= 0) {
+            const block = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            const event = block.match(/^event:\s*(.+)$/m)?.[1];
+            const data = block.split("\n").filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart()).join("\n");
+            if (event === "telemetry" && data) onTelemetry(JSON.parse(data) as CollectionProcessTelemetry);
+            boundary = buffer.indexOf("\n\n");
+          }
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+      }
+      if (!controller.signal.aborted) {
+        retryTimer = window.setTimeout(() => void connect(), Math.min(30_000, 1_000 * 2 ** Math.min(retry++, 5)));
+      }
+    };
+    void connect();
+    return () => { controller.abort(); if (retryTimer != null) window.clearTimeout(retryTimer); };
   }
 }
 

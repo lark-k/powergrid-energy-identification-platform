@@ -1,0 +1,1 @@
+"""Power-grid model service."""

@@ -1,0 +1,93 @@
+{
+  "train_period": {
+    "rows": 11705,
+    "first": "2025-11-25 11:17:00",
+    "last": "2025-12-03 14:21:00"
+  },
+  "test_period": {
+    "rows": 12603,
+    "first": "2025-12-03 15:24:00",
+    "last": "2025-12-12 09:34:00"
+  },
+  "target": "pv__active_power_kw (negative means generation)",
+  "baselines": {
+    "always_zero": {
+      "rows": 12603,
+      "mae_kw": 2.630763032907799,
+      "rmse_kw": 5.724530225856978,
+      "active_rows": 4045,
+      "active_mae_kw": 8.162026786869715,
+      "active_rmse_kw": 10.10423750096243,
+      "idle_false_generation_mae_kw": 0.0,
+      "true_energy_kwh": -552.20203332845,
+      "predicted_energy_kwh": 0.0,
+      "energy_bias_kwh": 552.20203332845
+    },
+    "negative_part_of_main": {
+      "rows": 12603,
+      "mae_kw": 1.1582847341167977,
+      "rmse_kw": 2.875636250557991,
+      "active_rows": 4045,
+      "active_mae_kw": 3.562205623206922,
+      "active_rmse_kw": 5.070284832536975,
+      "idle_false_generation_mae_kw": 0.005829793163940174,
+      "true_energy_kwh": -552.20203332845,
+      "predicted_energy_kwh": -315.30664781728336,
+      "energy_bias_kwh": 236.89538551116667
+    },
+    "main_minus_energy_station_oracle": {
+      "rows": 12603,
+      "mae_kw": 0.41016381415996195,
+      "rmse_kw": 1.6139235850956088,
+      "active_rows": 4045,
+      "active_mae_kw": 0.789603444447466,
+      "active_rmse_kw": 2.328339812091876,
+      "idle_false_generation_mae_kw": 0.23211986281899974,
+      "true_energy_kwh": -552.20203332845,
+      "predicted_energy_kwh": -570.6301638732834,
+      "energy_bias_kwh": -18.428130544833337
+    },
+    "causal_ridge_from_main_only": {
+      "rows": 12543,
+      "mae_kw": 0.9765460123755486,
+      "rmse_kw": 1.9074198444671737,
+      "active_rows": 3985,
+      "active_mae_kw": 1.978264989972864,
+      "active_rmse_kw": 3.0116636621750406,
+      "idle_false_generation_mae_kw": 0.5085325561124625,
+      "true_energy_kwh": -550.71120161465,
+      "predicted_energy_kwh": -581.4806588029925,
+      "energy_bias_kwh": -30.769457188342404
+    }
+  },
+  "causal_ridge_features": [
+    "active_power_kw",
+    "active_power_kw_mean_5",
+    "active_power_kw_mean_15",
+    "active_power_kw_mean_60",
+    "phase_a_power_kw",
+    "phase_a_power_kw_mean_5",
+    "phase_a_power_kw_mean_15",
+    "phase_a_power_kw_mean_60",
+    "phase_b_power_kw",
+    "phase_b_power_kw_mean_5",
+    "phase_b_power_kw_mean_15",
+    "phase_b_power_kw_mean_60",
+    "phase_c_power_kw",
+    "phase_c_power_kw_mean_5",
+    "phase_c_power_kw_mean_15",
+    "phase_c_power_kw_mean_60",
+    "total_delta_1",
+    "total_delta_5",
+    "total_delta_15",
+    "total_delta_60",
+    "total_std_15",
+    "total_std_60",
+    "time_sin",
+    "time_cos"
+  ],
+  "interpretation": {
+    "main_minus_energy_station_oracle": "Not a total-only model; shows the upper bound when the energy-station feeder meter is available.",
+    "causal_ridge_from_main_only": "Uses only current/past main total+phases and time-of-day."
+  }
+}

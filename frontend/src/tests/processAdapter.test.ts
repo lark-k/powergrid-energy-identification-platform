@@ -21,7 +21,11 @@ describe("process data adapter contracts", () => {
     expect(run.source).toBe("mock-api");
     expect(run.steps).toHaveLength(5);
     expect(run.epochs).toHaveLength(12);
-    expect(run.epochs.at(-1)?.validation_score).toBe(snapshot.training.validation_score);
+    expect(run.epochs.at(-1)?.validation_score).toBe(snapshot.training!.validation_score);
     expect(run.release_checks.every((check) => check.status === "passed")).toBe(true);
+  });
+
+  it("uses the stable energy station recognition identifier", () => {
+    expect(snapshot.recognition?.items.map((item) => item.kind)).toEqual(["pv", "energy_station", "charger"]);
   });
 });

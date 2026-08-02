@@ -1,5 +1,5 @@
 import { SYSTEM_CONFIG } from "../config/system";
-import type { CorrectionRecord, FeedbackBatch, MainStationMinutePoint, NodeStatus, PVSubstationPoint, RecognitionResult, SeparationResult, StationSnapshot } from "../types/domain";
+import type { CorrectionRecord, FeedbackBatch, MainSwitchMinutePoint, NodeStatus, PVSubstationPoint, RecognitionResult, SeparationResult, StationSnapshot } from "../types/domain";
 
 const DAY_START = new Date();
 DAY_START.setHours(0, 0, 0, 0);
@@ -23,7 +23,7 @@ const truePvAt = (m: number, dayIndex: number) => {
   return Math.max(0, capacityTotal * Math.pow(solar, 1.48) * cloud * dailyScale * (0.975 + noise(dayIndex * 1440 + m, 0.04)));
 };
 
-const mainStation: MainStationMinutePoint[] = [];
+const mainSwitch: MainSwitchMinutePoint[] = [];
 const truePv: number[] = [];
 const initialPv: number[] = [];
 
@@ -34,13 +34,13 @@ for (let i = 0; i < DATA_DAYS * 1440; i += 1) {
   const weekdayFactor = event.getDay() === 0 || event.getDay() === 6 ? 0.94 : 1;
   const load = (15_200 + 4_800 * gaussian(minuteOfDay, 505, 105) + 7_200 * gaussian(minuteOfDay, 1160, 135)) * weekdayFactor;
   const charger = (minuteOfDay >= 430 && minuteOfDay < 535 ? 2100 : 0) + (minuteOfDay >= 1070 && minuteOfDay < 1310 ? 4200 : 0);
-  const storage = minuteOfDay >= 90 && minuteOfDay < 270 ? 1600 : minuteOfDay >= 1090 && minuteOfDay < 1260 ? -1800 : 0;
+  const energyStationSignal = minuteOfDay >= 90 && minuteOfDay < 270 ? 1600 : minuteOfDay >= 1090 && minuteOfDay < 1260 ? -1800 : 0;
   const pv = truePvAt(minuteOfDay, dayIndex);
-  const total = Math.max(2500, load + charger + storage + pv * 0.35 + noise(i, 720));
+  const total = Math.max(2500, load + charger + energyStationSignal + pv * 0.35 + noise(i, 720));
   const initial = Math.max(0, pv * (0.9 + 0.035 * Math.sin(i / 47)) + noise(i + 9, 520));
   truePv.push(pv);
   initialPv.push(initial);
-  mainStation.push({
+  mainSwitch.push({
     station_id: SYSTEM_CONFIG.stationId,
     event_time: event.toISOString(),
     active_power_kw: Math.round(total),
@@ -165,14 +165,14 @@ const recognitionAt = (now: Date): RecognitionResult => ({
   model_version: SYSTEM_CONFIG.recognitionVersion,
   items: [
     { kind: "pv", label: "存在", score: 0.972, features: ["日照相关性", "午间反向特征"] },
-    { kind: "storage", label: "存在", score: 0.931, features: ["低谷充电", "峰时释能"] },
+    { kind: "energy_station", label: "存在", score: 0.931, features: ["持续功率特征", "时段性变化"] },
     { kind: "charger", label: "存在", score: 0.956, features: ["阶跃负荷", "持续时长"] },
   ],
 });
 
 export function snapshotAt(nowInput: Date): StationSnapshot {
   const now = new Date(Math.max(DATA_START.getTime(), Math.min(nowInput.getTime(), DATA_END.getTime())));
-  const minutes = mainStation.filter((point) => new Date(point.event_time) <= now);
+  const minutes = mainSwitch.filter((point) => new Date(point.event_time) <= now);
   const batches = allBatches.filter((batch) => new Date(batch.arrival_time) <= now);
   const arrived = substationPoints.filter((point) => new Date(point.arrival_time) <= now);
   const latestBatch = batches.at(-1);
@@ -264,4 +264,4 @@ export function snapshotAt(nowInput: Date): StationSnapshot {
   };
 }
 
-export const DEMO_DATASET = { mainStation, substationPoints, feedbackBatches: allBatches };
+export const DEMO_DATASET = { mainSwitch, substationPoints, feedbackBatches: allBatches };

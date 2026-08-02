@@ -1,0 +1,34 @@
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_PASSWORD: null
+    secrets: [db_password]
+  model-service:
+    environment:
+      MODEL_SERVICE_ENV: production
+      MODEL_SERVICE_TOKEN_FILE: /run/secrets/model_service_token
+      MODEL_SERVICE_TOKEN: null
+    secrets:
+      - source: model_service_token
+        target: MODEL_SERVICE_TOKEN
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SECURITY_MODE: oidc
+      DB_PASSWORD: null
+      MODEL_SERVICE_TOKEN: null
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      OIDC_ISSUER_URI: ${OIDC_ISSUER_URI:?OIDC_ISSUER_URI is required}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+    secrets:
+      - source: db_password
+        target: secrets.db-password
+      - source: model_service_token
+        target: secrets.model-service-token
+
+secrets:
+  db_password:
+    file: ${DB_PASSWORD_SECRET_FILE:?DB_PASSWORD_SECRET_FILE is required}
+  model_service_token:
+    file: ${MODEL_SERVICE_TOKEN_SECRET_FILE:?MODEL_SERVICE_TOKEN_SECRET_FILE is required}

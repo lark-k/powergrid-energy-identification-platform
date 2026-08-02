@@ -1,0 +1,510 @@
+{
+  "dataset_path": "C:\\Users\\YCQ\\Desktop\\renzhengju\\energy_device_detection\\artifacts\\device_detection_dataset.npz",
+  "seed": 20260729,
+  "task": "real-time current-minute multi-label resource identification; the state at t uses observations from t-119 through t and is not a future forecast",
+  "window_size_minutes": 120,
+  "stride_minutes": 1,
+  "target_minute": "window endpoint t",
+  "min_coverage_ratio": 0.1,
+  "max_interpolation_gap_minutes": 3,
+  "thresholds": {
+    "pv_minute_active": "pv active_power_kw <= -0.5",
+    "energy_station_minute_active": "energy-station feeder active_power_kw >= 5.0",
+    "charger_minute_active": "charger feeder active_power_kw >= 1.0",
+    "output": "current-minute state at window endpoint t"
+  },
+  "feature_names": [
+    "active_power_kw",
+    "phase_a_power_kw",
+    "phase_b_power_kw",
+    "phase_c_power_kw"
+  ],
+  "label_names": [
+    "pv_detected",
+    "energy_station_detected",
+    "charger_detected"
+  ],
+  "source_names": {
+    "0": "observed_main",
+    "1": "observed_charger_feeder",
+    "2": "synthetic_mixture"
+  },
+  "role_audit": {
+    "pv_a": {
+      "folder": "202511050001 光伏",
+      "expected_role": "photovoltaic",
+      "inferred_role": "photovoltaic",
+      "rows": 11705,
+      "q01_kw": -23.13911373992,
+      "q05_kw": -19.0960442118,
+      "q25_kw": -4.033188878,
+      "median_kw": -0.011156805,
+      "q75_kw": -0.005300013,
+      "q95_kw": 0.0029032453999999993,
+      "q99_kw": 0.010050279999999983,
+      "midday_mean_kw": -10.929645838974857,
+      "night_mean_kw": -0.006236129224583334,
+      "fraction_at_or_above_1kw": 0.0
+    },
+    "main_a": {
+      "folder": "202511050004 总开",
+      "expected_role": "aggregate_main",
+      "inferred_role": "aggregate_main",
+      "rows": 11767,
+      "q01_kw": -20.83429038166,
+      "q05_kw": -16.131585019,
+      "q25_kw": -0.417850555,
+      "median_kw": 1.822379355,
+      "q75_kw": 3.0796914429999998,
+      "q95_kw": 25.2099894204,
+      "q99_kw": 29.07139042716,
+      "midday_mean_kw": -6.496891835686437,
+      "night_mean_kw": 4.707229494274167,
+      "fraction_at_or_above_1kw": 0.7131809297187048
+    },
+    "energy_station_a": {
+      "folder": "202511250005 能源站",
+      "expected_role": "energy_station_feeder",
+      "inferred_role": "energy_station_feeder",
+      "rows": 11767,
+      "q01_kw": 0.500008351,
+      "q05_kw": 1.1639896692000002,
+      "q25_kw": 1.6341646239999998,
+      "median_kw": 2.583345899,
+      "q75_kw": 3.1374727924999997,
+      "q95_kw": 26.93564667049999,
+      "q99_kw": 29.32418081614,
+      "midday_mean_kw": 4.579073636556479,
+      "night_mean_kw": 4.680746005579583,
+      "fraction_at_or_above_1kw": 0.9632021755757627
+    },
+    "pv_b": {
+      "folder": "台区数据光伏0",
+      "expected_role": "photovoltaic",
+      "inferred_role": "photovoltaic",
+      "rows": 12616,
+      "q01_kw": -20.764302527549997,
+      "q05_kw": -14.661771478,
+      "q25_kw": -2.3369112860000003,
+      "median_kw": -0.0092611195,
+      "q75_kw": -0.0033988625,
+      "q95_kw": 0.00530028,
+      "q99_kw": 0.012339430850000008,
+      "midday_mean_kw": -9.591521774280418,
+      "night_mean_kw": -0.004737061527232308,
+      "fraction_at_or_above_1kw": 0.0
+    },
+    "main_b": {
+      "folder": "台区数据总开0",
+      "expected_role": "aggregate_main",
+      "inferred_role": "aggregate_main",
+      "rows": 12612,
+      "q01_kw": -18.46784821463,
+      "q05_kw": -10.779268426249999,
+      "q25_kw": 1.7570381175,
+      "median_kw": 3.120973511,
+      "q75_kw": 4.6382672295,
+      "q95_kw": 27.91312763905,
+      "q99_kw": 29.99222640625,
+      "midday_mean_kw": -2.6902874940904167,
+      "night_mean_kw": 8.245756505824444,
+      "fraction_at_or_above_1kw": 0.7842530922930543
+    },
+    "energy_station_b": {
+      "folder": "台区数据能源站0",
+      "expected_role": "energy_station_feeder",
+      "inferred_role": "energy_station_feeder",
+      "rows": 12613,
+      "q01_kw": 0.84590144388,
+      "q05_kw": 1.7220303154,
+      "q25_kw": 2.731325725,
+      "median_kw": 3.149950782,
+      "q75_kw": 5.090568397,
+      "q95_kw": 28.1963158892,
+      "q99_kw": 29.79041331859999,
+      "midday_mean_kw": 5.5127348527925,
+      "night_mean_kw": 8.22834594100037,
+      "fraction_at_or_above_1kw": 0.9835883612146198
+    },
+    "charger_pre_12": {
+      "folder": "台区数据12号",
+      "expected_role": "charger_feeder",
+      "inferred_role": "charger_feeder",
+      "rows": 12300,
+      "q01_kw": 0.00977456466,
+      "q05_kw": 0.009864229300000001,
+      "q25_kw": 0.01142062675,
+      "median_kw": 0.0139467875,
+      "q75_kw": 7.33937037,
+      "q95_kw": 14.8719700459,
+      "q99_kw": 21.61635884981,
+      "midday_mean_kw": 9.726399636033305,
+      "night_mean_kw": 2.033979591562827,
+      "fraction_at_or_above_1kw": 0.4419512195121951
+    },
+    "charger_pre_13": {
+      "folder": "台区数据13号",
+      "expected_role": "charger_feeder",
+      "inferred_role": "charger_feeder",
+      "rows": 12433,
+      "q01_kw": -0.12335263648,
+      "q05_kw": -0.12024204299999999,
+      "q25_kw": -0.103295007,
+      "median_kw": -0.100695047,
+      "q75_kw": -0.099091382,
+      "q95_kw": 7.238861882,
+      "q99_kw": 7.34349000712,
+      "midday_mean_kw": 2.433735445667083,
+      "night_mean_kw": -0.10391176437072808,
+      "fraction_at_or_above_1kw": 0.1716399903482667
+    },
+    "charger_post_12": {
+      "folder": "充电桩台区2.1-20251231-20260109-12号",
+      "expected_role": "charger_feeder",
+      "inferred_role": "charger_feeder",
+      "rows": 13213,
+      "q01_kw": 0.00983745456,
+      "q05_kw": 0.0103502564,
+      "q25_kw": 0.01149593,
+      "median_kw": 0.014196102,
+      "q75_kw": 7.342609397,
+      "q95_kw": 15.2275630488,
+      "q99_kw": 21.399701663039988,
+      "midday_mean_kw": 8.834843550617338,
+      "night_mean_kw": 1.9793023397603704,
+      "fraction_at_or_above_1kw": 0.43267993642624686
+    },
+    "charger_post_13": {
+      "folder": "充电桩台区2.2-20251231-20260109-13号",
+      "expected_role": "charger_feeder",
+      "inferred_role": "charger_feeder",
+      "rows": 13213,
+      "q01_kw": -0.12089788468000001,
+      "q05_kw": -0.11876651839999999,
+      "q25_kw": -0.100383921,
+      "median_kw": -0.098886296,
+      "q75_kw": 3.413990919,
+      "q95_kw": 7.2840593964,
+      "q99_kw": 7.34782169028,
+      "midday_mean_kw": 2.374753500870979,
+      "night_mean_kw": 1.0519757135977779,
+      "fraction_at_or_above_1kw": 0.2607280708393249
+    }
+  },
+  "normalization": {
+    "mean": {
+      "active_power_kw": 2.7718491554260254,
+      "phase_a_power_kw": 1.2963703870773315,
+      "phase_b_power_kw": 0.7408344745635986,
+      "phase_c_power_kw": 0.734650194644928
+    },
+    "std": {
+      "active_power_kw": 7.643786430358887,
+      "phase_a_power_kw": 3.1863160133361816,
+      "phase_b_power_kw": 2.934112310409546,
+      "phase_c_power_kw": 2.822758197784424
+    }
+  },
+  "aligned_periods": {
+    "train_main_a": {
+      "rows": 11705,
+      "first": "2025-11-25 11:17:00",
+      "last": "2025-12-03 14:21:00",
+      "interpolation": {
+        "main": {
+          "rows_before_reindex": 11767,
+          "rows_in_full_minute_span": 11767,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 10:15:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "pv": {
+          "rows_before_reindex": 11705,
+          "rows_in_full_minute_span": 11705,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 11:17:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "energy_station": {
+          "rows_before_reindex": 11767,
+          "rows_in_full_minute_span": 11767,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-11-25 10:15:00",
+          "source_last_minute": "2025-12-03 14:21:00"
+        },
+        "aligned_rows": 11705
+      }
+    },
+    "validation_test_main_b": {
+      "rows": 12611,
+      "first": "2025-12-03 15:24:00",
+      "last": "2025-12-12 09:34:00",
+      "interpolation": {
+        "main": {
+          "rows_before_reindex": 12612,
+          "rows_in_full_minute_span": 12612,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 1,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 1,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:23:00",
+          "source_last_minute": "2025-12-12 09:34:00"
+        },
+        "pv": {
+          "rows_before_reindex": 12616,
+          "rows_in_full_minute_span": 12620,
+          "missing_minutes": 4,
+          "low_coverage_minutes": 6,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 10,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:20:00",
+          "source_last_minute": "2025-12-12 09:39:00"
+        },
+        "energy_station": {
+          "rows_before_reindex": 12613,
+          "rows_in_full_minute_span": 12617,
+          "missing_minutes": 4,
+          "low_coverage_minutes": 7,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 11,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-03 15:24:00",
+          "source_last_minute": "2025-12-12 09:40:00"
+        },
+        "aligned_rows": 12611
+      }
+    },
+    "train_charger_pre": [
+      {
+        "rows": 12460,
+        "first": "2025-12-22 18:12:00",
+        "last": "2025-12-31 09:51:00",
+        "interpolation": {
+          "rows_before_reindex": 12300,
+          "rows_in_full_minute_span": 12460,
+          "missing_minutes": 160,
+          "low_coverage_minutes": 55,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 215,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 3,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-22 18:12:00",
+          "source_last_minute": "2025-12-31 09:51:00"
+        }
+      },
+      {
+        "rows": 12462,
+        "first": "2025-12-22 18:12:00",
+        "last": "2025-12-31 09:53:00",
+        "interpolation": {
+          "rows_before_reindex": 12433,
+          "rows_in_full_minute_span": 12462,
+          "missing_minutes": 29,
+          "low_coverage_minutes": 19,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 48,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 1,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-22 18:12:00",
+          "source_last_minute": "2025-12-31 09:53:00"
+        }
+      }
+    ],
+    "validation_test_charger_post": [
+      {
+        "rows": 13213,
+        "first": "2025-12-31 10:33:00",
+        "last": "2026-01-09 14:45:00",
+        "interpolation": {
+          "rows_before_reindex": 13213,
+          "rows_in_full_minute_span": 13213,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-31 10:33:00",
+          "source_last_minute": "2026-01-09 14:45:00"
+        }
+      },
+      {
+        "rows": 13213,
+        "first": "2025-12-31 10:33:00",
+        "last": "2026-01-09 14:45:00",
+        "interpolation": {
+          "rows_before_reindex": 13213,
+          "rows_in_full_minute_span": 13213,
+          "missing_minutes": 0,
+          "low_coverage_minutes": 0,
+          "invalid_power_minutes": 0,
+          "interpolated_minutes": 0,
+          "unfilled_minutes": 0,
+          "maximum_gap_minutes": 0,
+          "max_interpolation_gap_minutes": 3,
+          "min_coverage_ratio": 0.1,
+          "source_first_minute": "2025-12-31 10:33:00",
+          "source_last_minute": "2026-01-09 14:45:00"
+        }
+      }
+    ]
+  },
+  "splits": [
+    {
+      "name": "train",
+      "samples": 42007,
+      "shape": [
+        42007,
+        120,
+        4
+      ],
+      "positive_rates": {
+        "pv_detected": 0.4033322036266327,
+        "energy_station_detected": 0.25503242015838623,
+        "charger_detected": 0.34630683064460754
+      },
+      "supervised_samples": {
+        "pv_detected": 17586,
+        "energy_station_detected": 17586,
+        "charger_detected": 30421
+      },
+      "sources": {
+        "observed_main": 11586,
+        "observed_charger_feeder": 24421,
+        "synthetic_mixture": 6000
+      },
+      "feature_min": {
+        "active_power_kw": -4.006707668304443,
+        "phase_a_power_kw": -3.2736828327178955,
+        "phase_b_power_kw": -3.448683500289917,
+        "phase_c_power_kw": -3.5735721588134766
+      },
+      "feature_max": {
+        "active_power_kw": 8.296965599060059,
+        "phase_a_power_kw": 6.460052967071533,
+        "phase_b_power_kw": 7.465123653411865,
+        "phase_c_power_kw": 7.8126678466796875
+      }
+    },
+    {
+      "name": "validation",
+      "samples": 16457,
+      "shape": [
+        16457,
+        120,
+        4
+      ],
+      "positive_rates": {
+        "pv_detected": 0.36375510692596436,
+        "energy_station_detected": 0.33273470401763916,
+        "charger_detected": 0.23031564056873322
+      },
+      "supervised_samples": {
+        "pv_detected": 6125,
+        "energy_station_detected": 6125,
+        "charger_detected": 11532
+      },
+      "sources": {
+        "observed_main": 4925,
+        "observed_charger_feeder": 10332,
+        "synthetic_mixture": 1200
+      },
+      "feature_min": {
+        "active_power_kw": -3.790931463241577,
+        "phase_a_power_kw": -3.1270768642425537,
+        "phase_b_power_kw": -3.24273419380188,
+        "phase_c_power_kw": -3.3854455947875977
+      },
+      "feature_max": {
+        "active_power_kw": 16.167163848876953,
+        "phase_a_power_kw": 14.126349449157715,
+        "phase_b_power_kw": 15.660017013549805,
+        "phase_c_power_kw": 16.50428009033203
+      }
+    },
+    {
+      "name": "test",
+      "samples": 16459,
+      "shape": [
+        16459,
+        120,
+        4
+      ],
+      "positive_rates": {
+        "pv_detected": 0.3401471674442291,
+        "energy_station_detected": 0.2508995831012726,
+        "charger_detected": 0.45240160822868347
+      },
+      "supervised_samples": {
+        "pv_detected": 6115,
+        "energy_station_detected": 6114,
+        "charger_detected": 11534
+      },
+      "sources": {
+        "observed_main": 4925,
+        "observed_charger_feeder": 10334,
+        "synthetic_mixture": 1200
+      },
+      "feature_min": {
+        "active_power_kw": -5.807337760925293,
+        "phase_a_power_kw": -4.496218204498291,
+        "phase_b_power_kw": -5.102328777313232,
+        "phase_c_power_kw": -5.3592352867126465
+      },
+      "feature_max": {
+        "active_power_kw": 9.082528114318848,
+        "phase_a_power_kw": 7.6287407875061035,
+        "phase_b_power_kw": 7.946974754333496,
+        "phase_c_power_kw": 8.437116622924805
+      }
+    }
+  ],
+  "known_limitations": [
+    "PV/energy-station labels are derived from synchronized component meters.",
+    "Charger labels are derived from the charging-feeder aggregate threshold, not an independent charger submeter.",
+    "Observed main windows have no synchronized charger label and observed charger-feeder windows have no synchronized PV/energy-station labels; unsynchronized labels are masked out of loss and metrics.",
+    "Missing minutes and minutes below the configured coverage ratio are linearly interpolated only when the bounded gap does not exceed the configured limit.",
+    "Observed-window endpoints must be original, non-interpolated minutes so real-time outputs do not depend on future samples.",
+    "Partially covered minutes at or above the configured threshold retain the mean of their available raw samples.",
+    "The target is the operating state at the current window endpoint, not proof of physical installation while fully idle.",
+    "Synthetic mixtures cover label combinations absent from the observed aggregate datasets; they are component additions, not timestamp-synchronized observations."
+  ]
+}

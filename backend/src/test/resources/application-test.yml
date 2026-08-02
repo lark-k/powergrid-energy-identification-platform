@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:powergrid;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  flyway:
+    locations: classpath:db/migration,classpath:db/devdata
+  task:
+    scheduling:
+      enabled: false
+
+platform:
+  security:
+    mode: dev
+    cors-allowed-origins: http://localhost:5173
+  model-service:
+    base-url: http://127.0.0.1:1
+    token: ""
+    connect-timeout: 10ms
+    read-timeout: 10ms
+    max-retries: 0
+    circuit-failure-threshold: 1
+    circuit-open-duration: 1s
+    shadow-enabled: false
+    candidate-base-url: ""
+  imports:
+    allowed-content-types: text/csv,application/json
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

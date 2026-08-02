@@ -1,0 +1,45 @@
+{
+  "resource_identification": {
+    "checkpoint": "outputs/selected_model.pt",
+    "task": "real-time current-minute three-resource identification",
+    "input": "aggregate active power and phase A/B/C power from t-119 through t",
+    "output_minute": "t",
+    "output_format": "UTF-8 CSV with BOM, one row per target minute, Chinese column headers",
+    "outputs": {
+      "目标分钟": "被辨识的当前分钟 t",
+      "窗口开始时间": "本行推理使用的第一个历史分钟",
+      "窗口结束时间": "本行推理使用的最后一个分钟，等于 t",
+      "窗口内插值分钟数": "历史窗口中插值分钟的整数计数",
+      "光伏运行概率": "[0,1] 浮点数",
+      "光伏运行状态": "0/1，分钟 t 是否检测到光伏运行信号",
+      "能源站运行概率": "[0,1] 浮点数",
+      "能源站运行状态": "0/1，分钟 t 是否检测到能源站馈线运行信号",
+      "充电桩运行概率": "[0,1] 浮点数",
+      "充电桩运行状态": "0/1，分钟 t 是否检测到充电桩运行信号"
+    },
+    "future_data_used": false,
+    "update_cadence_minutes": 1,
+    "warmup_minutes": 120,
+    "important_semantics": "Detection means current observable operating evidence; it does not prove physical installation while a resource is fully idle."
+  },
+  "pv_disaggregation": {
+    "checkpoint": "pv_outputs/selected_pv_model.pt",
+    "task": "real-time same-minute PV power disaggregation",
+    "input": "aggregate active power and phase A/B/C power from t-239 through t, plus causal derived features",
+    "output_minute": "t",
+    "output_format": "UTF-8 CSV with BOM, one row per target minute, Chinese column headers",
+    "outputs": {
+      "目标分钟": "被分离的当前分钟 t",
+      "总开有功功率(kW)": "分钟 t 的总开有功功率",
+      "窗口内插值分钟数": "历史窗口中插值分钟的整数计数",
+      "分离光伏发电功率(kW)": "从总开中分离出的非负光伏发电功率",
+      "分离光伏有功功率(kW)": "采用原光伏表负号约定的同一分离结果",
+      "光伏运行概率": "[0,1] 浮点数",
+      "光伏运行状态": "0/1，当前分钟是否存在光伏出力"
+    },
+    "future_data_used": false,
+    "update_cadence_minutes": 1,
+    "warmup_minutes": 240,
+    "important_semantics": "This is same-minute separation, not a t+1 or future PV forecast."
+  }
+}

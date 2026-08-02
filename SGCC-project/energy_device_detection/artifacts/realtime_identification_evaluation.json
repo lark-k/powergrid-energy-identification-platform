@@ -1,0 +1,82 @@
+{
+  "conclusion": "feasible",
+  "task": "real-time current-minute multi-label resource identification",
+  "semantics": {
+    "input": "observations from t-119 through t",
+    "target": "PV, energy-station feeder, and charger operating states at minute t",
+    "future_samples_used": false,
+    "update_cadence_minutes": 1,
+    "warmup_minutes": 120
+  },
+  "selected_model": {
+    "name": "tcn_lstm",
+    "parameters": 27995,
+    "causal_tcn": true,
+    "unidirectional_lstm": true,
+    "classification_state": "window endpoint t"
+  },
+  "dataset": {
+    "train_windows": 42007,
+    "validation_windows": 16457,
+    "test_windows": 16459,
+    "stride_minutes": 1
+  },
+  "held_out_test_metrics": {
+    "macro_f1": 0.9145086353209742,
+    "macro_roc_auc": 0.9777688976469565,
+    "hamming_accuracy_on_supervised_label_cells": 0.9578336068678197,
+    "exact_match_accuracy_on_fully_supervised_synthetic_windows": 0.7083333333333334,
+    "labels": {
+      "pv_detected": {
+        "precision": 0.8111658456486043,
+        "recall": 0.95,
+        "f1": 0.87511071744907,
+        "roc_auc": 0.964010461347822
+      },
+      "energy_station_detected": {
+        "precision": 0.886058981233244,
+        "recall": 0.8617992177314211,
+        "f1": 0.8737607402511567,
+        "roc_auc": 0.969380220105555
+      },
+      "charger_detected": {
+        "precision": 0.9908710536325599,
+        "recall": 0.9984668455346877,
+        "f1": 0.9946544482626957,
+        "roc_auc": 0.9999160114874924
+      }
+    }
+  },
+  "end_to_end_later_period_check": {
+    "pv_detected": {
+      "f1": 0.8965079365079366,
+      "roc_auc": 0.9753294779495653,
+      "median_transition_response_minutes": 0.0,
+      "p90_transition_response_minutes": 5.0
+    },
+    "energy_station_detected": {
+      "f1": 0.8571428571428572,
+      "roc_auc": 0.9695934167626139,
+      "median_transition_response_minutes": 0.0,
+      "p90_transition_response_minutes": 1.0
+    },
+    "charger_detected": {
+      "f1": 0.9987012987012988,
+      "roc_auc": 0.9999915897902781,
+      "median_transition_response_minutes": 0.0,
+      "p90_transition_response_minutes": 0.0
+    }
+  },
+  "runtime": {
+    "device": "cuda",
+    "single_window_forward_ms": 1.2,
+    "latest_input_minute": "2025-12-12 09:34:00",
+    "latest_output_minute": "2025-12-12 09:34:00"
+  },
+  "limitations": [
+    "The output identifies current operating signals, not physical installation while a device is fully idle.",
+    "PV current-state transitions are less stable near the -0.5 kW label threshold.",
+    "Charger labels come from aggregate charger-feeder power rather than individual charger submeters.",
+    "Synchronized main/PV/energy-station data and charger-feeder data have zero timestamp overlap, so real mixed-boundary charger identification still needs synchronized external validation."
+  ]
+}

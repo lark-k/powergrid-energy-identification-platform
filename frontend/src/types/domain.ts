@@ -3,7 +3,7 @@ export type ResultStatus = "实时初始" | "等待反馈" | "已反馈校正";
 export type FeedbackStatus = "已反馈" | "等待回传";
 export type RecognitionLabel = "存在" | "疑似存在" | "未发现明显特征";
 
-export interface MainStationMinutePoint {
+export interface MainSwitchMinutePoint {
   station_id: string;
   event_time: string;
   active_power_kw: number;
@@ -42,7 +42,7 @@ export interface FeedbackBatch {
 }
 
 export interface RecognitionItem {
-  kind: "pv" | "storage" | "charger";
+  kind: "pv" | "energy_station" | "charger";
   label: RecognitionLabel;
   score: number;
   features: string[];
@@ -93,10 +93,11 @@ export interface CorrectionRecord {
 export interface ModelHealth {
   recognition_status: "running" | "degraded";
   separation_status: "running" | "degraded";
-  recognition_version: string;
-  separation_version: string;
-  last_inference_ms: number;
-  last_inference_time: string;
+  recognition_version: string | null;
+  separation_version: string | null;
+  last_inference_ms: number | null;
+  last_inference_time: string | null;
+  window_status?: "warming" | "warming_up" | "ready" | "unavailable";
 }
 
 export interface TrainingSummary {
@@ -131,17 +132,36 @@ export interface StationSnapshot {
   now: string;
   station_id: string;
   station_name: string;
-  minute_points: MainStationMinutePoint[];
+  minute_points: MainSwitchMinutePoint[];
   separation_results: SeparationResult[];
   substation_points: PVSubstationPoint[];
   feedback_batches: FeedbackBatch[];
-  recognition: RecognitionResult;
+  recognition: RecognitionResult | null;
   corrections: CorrectionRecord[];
-  training: TrainingSummary;
+  training: TrainingSummary | null;
   model_health: ModelHealth;
   node_statuses: NodeStatus[];
   quality: DataQualitySummary;
 }
+
+export interface StationSummary {
+  station_id: string;
+  station_name: string;
+  timezone: string;
+  status: string;
+}
+
+export interface StationDataRange {
+  first_event_time: string | null;
+  last_event_time: string | null;
+  minute_count: number;
+  recognition_result_count: number;
+  separation_result_count: number;
+}
+
+export type ViewMode = "live" | "history";
+
+export type ConnectionState = "connecting" | "online" | "offline" | "degraded";
 
 export type ProcessDataSource = "mock-api" | "rest-api" | "sse";
 export type ProcessStepStatus = "waiting" | "running" | "completed" | "failed";

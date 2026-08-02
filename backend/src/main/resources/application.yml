@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: powergrid-platform-backend
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD:${secrets.db-password:}}
+  flyway:
+    locations: classpath:db/migration
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: ${IMPORT_MAX_FILE_SIZE:20MB}
+      max-request-size: ${IMPORT_MAX_REQUEST_SIZE:21MB}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:}
+
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,modelService
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+platform:
+  security:
+    mode: ${SECURITY_MODE:oidc}
+    cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  model-service:
+    base-url: ${MODEL_SERVICE_BASE_URL:http://localhost:8000}
+    token: ${MODEL_SERVICE_TOKEN:${secrets.model-service-token:}}
+    connect-timeout: ${MODEL_SERVICE_CONNECT_TIMEOUT:2s}
+    read-timeout: ${MODEL_SERVICE_READ_TIMEOUT:30s}
+    max-retries: ${MODEL_SERVICE_MAX_RETRIES:2}
+    circuit-failure-threshold: ${MODEL_SERVICE_CIRCUIT_FAILURE_THRESHOLD:3}
+    circuit-open-duration: ${MODEL_SERVICE_CIRCUIT_OPEN_DURATION:30s}
+    shadow-enabled: ${MODEL_SHADOW_ENABLED:false}
+    candidate-base-url: ${MODEL_CANDIDATE_SERVICE_BASE_URL:}
+  imports:
+    allowed-content-types: text/csv,application/json
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:false}
+
+logging:
+  pattern:
+    console: '{"timestamp":"%d{yyyy-MM-dd''T''HH:mm:ss.SSSXXX}","level":"%p","logger":"%logger{36}","request_id":"%X{request_id:-}","message":"%replace(%m){''[\r\n]+'','' ''}"}%n'

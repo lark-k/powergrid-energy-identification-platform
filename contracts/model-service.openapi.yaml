@@ -1,0 +1,289 @@
+openapi: 3.1.0
+info:
+  title: 台区能源辨识内部模型服务 API
+  version: 1.0.0
+  description: Java 业务后台与 Python 模型服务之间的稳定契约。模型服务只执行分析推理，不提供设备控制。
+servers:
+  - url: http://model-service:8000
+security:
+  - serviceBearer: []
+paths:
+  /health/live:
+    get:
+      security: []
+      operationId: modelLiveness
+      responses:
+        '200':
+          description: 进程存活
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+  /health/ready:
+    get:
+      security: []
+      operationId: modelReadiness
+      responses:
+        '200':
+          description: checkpoint、预处理和模型均已匹配并加载
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '503':
+          description: 模型未就绪或摘要不匹配
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /internal/v1/models:
+    get:
+      operationId: listModelManifests
+      responses:
+        '200':
+          description: 已加载模型清单
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ModelManifest' }
+  /internal/v1/models/{task}/manifest:
+    get:
+      operationId: getModelManifest
+      parameters:
+        - $ref: '#/components/parameters/Task'
+      responses:
+        '200':
+          description: 指定任务的不可分割发布清单
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelManifest' }
+        '404':
+          description: 任务不存在
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /internal/v1/inference/minute:
+    post:
+      operationId: inferMinute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InferenceRequest' }
+      responses:
+        '200':
+          description: 当前分钟因果推理结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InferenceResult' }
+        '422':
+          description: 输入或连续窗口不满足要求
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: 模型不可用
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /internal/v1/inference/batch:
+    post:
+      operationId: inferBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchInferenceRequest' }
+      responses:
+        '200':
+          description: 按目标分钟升序返回结果
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InferenceResult' }
+  /internal/v1/inference/replay:
+    post:
+      operationId: replayInference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchInferenceRequest' }
+      responses:
+        '200':
+          description: 历史重放结果，不修改模型状态
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InferenceResult' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    Task:
+      name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [resource_identification, pv_separation]
+  schemas:
+    MinutePoint:
+      type: object
+      additionalProperties: false
+      required:
+        - station_id
+        - event_time
+        - active_power_kw
+        - phase_a_power_kw
+        - phase_b_power_kw
+        - phase_c_power_kw
+        - coverage_ratio
+        - quality_flag
+        - source_id
+      properties:
+        station_id: { type: string, minLength: 1, maxLength: 64 }
+        event_time: { type: string, format: date-time }
+        active_power_kw: { type: number }
+        phase_a_power_kw: { type: number }
+        phase_b_power_kw: { type: number }
+        phase_c_power_kw: { type: number }
+        coverage_ratio: { type: number, minimum: 0, maximum: 1 }
+        quality_flag:
+          type: string
+          enum: [good, warning, missing, out_of_order]
+        source_id: { type: string, minLength: 1, maxLength: 128 }
+    InferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, station_id, target_time, points]
+      properties:
+        request_id: { type: string, minLength: 1, maxLength: 80 }
+        station_id: { type: string, minLength: 1, maxLength: 64 }
+        target_time: { type: string, format: date-time }
+        points:
+          type: array
+          minItems: 1
+          maxItems: 10080
+          items: { $ref: '#/components/schemas/MinutePoint' }
+    BatchInferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, station_id, target_times, points]
+      properties:
+        request_id: { type: string, minLength: 1, maxLength: 80 }
+        station_id: { type: string, minLength: 1, maxLength: 64 }
+        target_times:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items: { type: string, format: date-time }
+        points:
+          type: array
+          minItems: 1
+          maxItems: 10080
+          items: { $ref: '#/components/schemas/MinutePoint' }
+    ResourceInference:
+      type: object
+      additionalProperties: false
+      required: [score, detected]
+      properties:
+        score: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        detected: { type: [boolean, 'null'] }
+    InferenceResult:
+      type: object
+      additionalProperties: false
+      required:
+        - station_id
+        - target_time
+        - request_id
+        - input_window_start
+        - input_window_end
+        - interpolated_minutes
+        - quality_status
+        - recognition_model_version
+        - separation_model_version
+        - pv
+        - energy_station
+        - charger
+        - pv_generation_kw
+        - pv_activity_probability
+        - inference_time_ms
+        - warnings
+      properties:
+        station_id: { type: string }
+        target_time: { type: string, format: date-time }
+        request_id: { type: string }
+        input_window_start: { type: [string, 'null'], format: date-time }
+        input_window_end: { type: [string, 'null'], format: date-time }
+        recognition_window_start: { type: [string, 'null'], format: date-time }
+        separation_window_start: { type: [string, 'null'], format: date-time }
+        interpolated_minutes: { type: integer, minimum: 0 }
+        quality_status:
+          type: string
+          enum: [good, warning, insufficient_history, discontinuous, invalid]
+        recognition_model_version: { type: [string, 'null'] }
+        separation_model_version: { type: [string, 'null'] }
+        pv: { $ref: '#/components/schemas/ResourceInference' }
+        energy_station: { $ref: '#/components/schemas/ResourceInference' }
+        charger: { $ref: '#/components/schemas/ResourceInference' }
+        pv_generation_kw: { type: [number, 'null'], minimum: 0 }
+        pv_activity_probability: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        inference_time_ms: { type: number, minimum: 0 }
+        warnings:
+          type: array
+          items: { type: string }
+    ModelManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - model_id
+        - task
+        - model_version
+        - artifact_sha256
+        - model_type
+        - input_schema_version
+        - output_schema_version
+        - required_history_minutes
+        - input_fields
+        - output_fields
+        - thresholds
+        - trained_at
+        - loaded_at
+        - runtime_version
+        - health_status
+      properties:
+        model_id: { type: string }
+        task: { type: string, enum: [resource_identification, pv_separation] }
+        model_version: { type: string }
+        artifact_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        model_type: { type: string }
+        input_schema_version: { type: string }
+        output_schema_version: { type: string }
+        required_history_minutes: { type: integer, enum: [120, 240] }
+        input_fields: { type: array, items: { type: string } }
+        output_fields: { type: array, items: { type: string } }
+        thresholds: { type: object, additionalProperties: { type: number } }
+        trained_at: { type: string, format: date-time }
+        loaded_at: { type: string, format: date-time }
+        runtime_version: { type: string }
+        health_status: { type: string, enum: [ready, degraded, failed] }
+        limitations: { type: array, items: { type: string } }
+    HealthResponse:
+      type: object
+      required: [status, request_id]
+      properties:
+        status: { type: string, enum: [ok, ready, degraded] }
+        request_id: { type: string }
+        details: { type: object }
+    ErrorResponse:
+      type: object
+      required: [code, message, request_id, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        details: { type: object }

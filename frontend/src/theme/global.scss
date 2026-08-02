@@ -27,7 +27,7 @@
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { min-width: 1280px; min-height: 720px; -webkit-font-smoothing: auto; text-rendering: optimizeLegibility; background: #030816; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { color: inherit; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
@@ -54,12 +54,33 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .clock { gap: 10px; font-family: "JetBrains Mono", Consolas, monospace; } .clock strong { color: #58e8fa; font-size: 13px; font-weight: 650; }
   button { width: 31px; height: 31px; display: grid; place-items: center; border: 0; background: transparent; color: #bdd2de; cursor: pointer; transition: .2s; }
   button:hover { color: var(--cyan); background: rgba(25,211,255,.08); } button:disabled { opacity: .4; cursor: wait; }
+  .warning { color: var(--amber); }
+  .warning i { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+  .station-select { display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; color: #c0d8e5; }
+  .station-select select { max-width: 150px; appearance: none; border: 0; outline: 0; color: inherit; background: transparent; cursor: pointer; }
+  .station-select option { color: #082037; background: #e8f7ff; }
 }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.system-state { position: absolute; z-index: 20; top: 84px; right: 24px; display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 7px 12px; border: 1px solid rgba(255,184,77,.5); border-radius: 4px; color: #ffe0a6; background: rgba(46,27,4,.9); box-shadow: 0 8px 28px rgba(0,0,0,.35); font-size: 10px; }
+.system-state small { color: #caa96f; font-family: "JetBrains Mono", Consolas, monospace; }
+.system-state.connecting { border-color: rgba(25,211,255,.45); color: #a8f2ff; background: rgba(3,29,45,.92); }
+.fatal-state { position: absolute; z-index: 30; inset: 80px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #b7d6e7; background: rgba(3,8,22,.95); }
+.fatal-state b { color: #f3fbff; font-size: 20px; }
+.fatal-state button { padding: 8px 18px; border: 1px solid rgba(25,211,255,.55); border-radius: 4px; color: var(--cyan); background: rgba(25,211,255,.08); cursor: pointer; }
+.recognition-empty { min-height: 54px; display: grid; place-items: center; padding: 10px; color: #809fb1; font-size: 9px; text-align: center; }
 
 .subnav { position: relative; z-index: 5; height: 28px; padding: 0 25px; display: flex; align-items: center; gap: 28px; background: linear-gradient(90deg, rgba(3,11,25,.76), rgba(6,20,39,.56), rgba(3,11,25,.72)); border-bottom: 1px solid rgba(88,164,211,.13); color: #a9c5d6; font-size: 11px; font-weight: 500;
   > span { position: relative; } > span.active { color: #effbff; font-weight: 650; } > span.active::before { content: ""; position: absolute; left: -14px; top: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); } > span.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 1px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 }
 .range-switch { margin-left: auto; display: flex; gap: 3px; button { border: 1px solid transparent; background: transparent; color: #a7c3d4; min-width: 34px; height: 22px; cursor: pointer; font-size: 11px; font-weight: 650; transition: color .2s, border-color .2s, background .2s, box-shadow .2s; } button:hover, button.active { color: #7bebff; border-color: rgba(25,211,255,.48); background: linear-gradient(180deg, rgba(25,211,255,.15), rgba(58,120,255,.06)); box-shadow: inset 0 0 12px rgba(25,211,255,.08), 0 0 12px rgba(25,211,255,.08); } }
+.history-switch { margin-left: auto; display: flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", Consolas, monospace;
+  button, label { height: 22px; border: 1px solid rgba(91,156,195,.24); border-radius: 3px; color: #9dbccd; background: rgba(5,20,38,.58); }
+  button { padding: 0 8px; cursor: pointer; } button.active, label.active { color: #78efff; border-color: rgba(25,211,255,.5); background: rgba(25,211,255,.09); }
+  label { display: flex; align-items: center; gap: 5px; padding: 0 6px; } label span { font-size: 9px; }
+  input { width: 142px; border: 0; outline: 0; color: #d9f6ff; background: transparent; font: 500 9px "JetBrains Mono", Consolas, monospace; color-scheme: dark; }
+  small { color: #779bad; font-size: 8px; white-space: nowrap; }
+}
+.history-switch + .range-switch { margin-left: 6px; }
 
 .pipeline-flow {
   position: relative; z-index: 5; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch;

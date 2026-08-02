@@ -1,0 +1,737 @@
+openapi: 3.1.0
+info:
+  title: 台区能源辨识与光伏功率分离平台 API
+  version: 2.0.0
+  description: React 前端仅调用本 Java API。系统只提供监测分析，不提供设备控制。
+servers:
+  - url: /api/v1
+security:
+  - oidcBearer: []
+paths:
+  /stations:
+    get:
+      operationId: listStations
+      responses:
+        '200':
+          description: 当前用户有权访问的台区
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Station' }
+  /stations/{stationId}/snapshot:
+    get:
+      operationId: getStationSnapshot
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/At'
+        - $ref: '#/components/parameters/Range'
+      responses:
+        '200':
+          description: 台区完整快照
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StationSnapshot' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /stations/{stationId}/data-range:
+    get:
+      operationId: getStationDataRange
+      description: 返回真实总开分钟数据及模型结果的时间边界和记录数，供历史导航使用。
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 台区数据边界
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StationDataRange' }
+  /stations/{stationId}/minute-series:
+    get:
+      operationId: getMainSwitchMinuteSeries
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 总开分钟数据分页
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MinutePointPage' }
+  /stations/{stationId}/results:
+    get:
+      operationId: getResults
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 光伏分离结果分页
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeparationResultPage' }
+  /stations/{stationId}/recognition/latest:
+    get:
+      operationId: getLatestRecognition
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/At'
+      responses:
+        '200':
+          description: 最新辨识结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecognitionResult' }
+  /stations/{stationId}/inference-replays:
+    get:
+      operationId: listInferenceReplayJobs
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 最近历史推理回放任务
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/InferenceReplayJob' } }
+    post:
+      operationId: createInferenceReplayJob
+      description: 对数据库中已存在的总开分钟数据执行真实模型历史补算；不会伪造缺失结果。
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InferenceReplayRequest' }
+      responses:
+        '202':
+          description: 回放任务已进入队列
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InferenceReplayJob' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /stations/{stationId}/inference-replays/{jobId}:
+    get:
+      operationId: getInferenceReplayJob
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 历史推理回放任务状态
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InferenceReplayJob' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /stations/{stationId}/feedback-batches:
+    get:
+      operationId: getFeedbackBatches
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/At'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 仅返回 arrival_time 已到达的反馈批次
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedbackBatchPage' }
+  /stations/{stationId}/feedback-batches/{batchId}/points:
+    get:
+      operationId: getFeedbackPoints
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/At'
+      responses:
+        '200':
+          description: 批次光伏分站点
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PvFeedbackPoint' }
+  /stations/{stationId}/corrections:
+    get:
+      operationId: getCorrections
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 历史校正分页
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CorrectionPage' }
+  /stations/{stationId}/nodes:
+    get:
+      operationId: getNodes
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 节点状态
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/NodeStatus' } }
+  /stations/{stationId}/quality:
+    get:
+      operationId: getQuality
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 数据质量
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DataQualitySummary' }
+  /stations/{stationId}/models/health:
+    get:
+      operationId: getModelHealth
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 模型健康状态
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelHealth' }
+  /stations/{stationId}/process/collection:
+    get:
+      operationId: getCollectionProcess
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 采集过程快照
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionProcess' }
+  /stations/{stationId}/process/collection/stream:
+    get:
+      operationId: streamCollectionProcess
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: SSE telemetry 事件；重连后客户端重新获取完整快照
+          content:
+            text/event-stream:
+              schema: { type: string }
+  /stations/{stationId}/training-runs/latest:
+    get:
+      operationId: getLatestTrainingRun
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 最近真实训练运行；无 epoch 时 epochs 为空数组
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrainingRun' }
+  /imports:
+    post:
+      operationId: createImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [station_id, data_type, file]
+              properties:
+                station_id: { type: string }
+                data_type: { type: string, enum: [main_switch, pv_feedback] }
+                file: { type: string, format: binary }
+      responses:
+        '202':
+          description: 已接受导入
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportResult' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /exports:
+    post:
+      operationId: createExport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportRequest' }
+      responses:
+        '200':
+          description: CSV 导出
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+  /ingestion/main-switch/minutes:
+    post:
+      operationId: ingestMainSwitchMinutes
+      parameters:
+        - in: query
+          name: replace_existing
+          description: 仅用于受控数据修复；字段不同的同站同分钟记录会被更新。
+          schema: { type: boolean, default: false }
+        - in: query
+          name: run_inference
+          description: 批量历史导入时设为 false，完成后通过历史回放统一推理。
+          schema: { type: boolean, default: true }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [points]
+              properties:
+                points:
+                  type: array
+                  minItems: 1
+                  maxItems: 5000
+                  items: { $ref: '#/components/schemas/MainSwitchMinutePoint' }
+      responses:
+        '202':
+          description: 原始分钟已幂等保存；是否进入逐分钟推理由 run_inference 决定
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestionReceipt' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /ingestion/pv-feedback/batches:
+    post:
+      operationId: ingestPvFeedbackBatch
+      description: 反馈仅在 arrival_time 到达后按历史 event_time 生成校正。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '202': { description: 反馈批次已幂等接收 }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /training-runs:
+    post:
+      operationId: createTrainingRun
+      description: 管理员登记外部训练系统产生的真实运行记录。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [run_id, model_version, dataset_window_days, sample_count, started_at, parameters_json] }
+      responses:
+        '200': { description: 训练运行已登记 }
+  /training-runs/{runId}/epochs:
+    post:
+      operationId: appendTrainingEpoch
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [epoch, training_loss, validation_score, recorded_at] }
+      responses:
+        '200': { description: 真实 epoch 指标已记录 }
+  /training-runs/{runId}/complete:
+    post:
+      operationId: completeTrainingRun
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [status, completed_at] }
+      responses:
+        '200': { description: 训练运行已结束 }
+  /models:
+    post:
+      operationId: registerModel
+      description: 注册完整模型制品；注册后不会自动成为 active。
+      responses:
+        '200': { description: 模型已注册 }
+  /models/{version}/approve:
+    post:
+      operationId: approveModel
+      parameters: [{ name: version, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 模型已人工审批 }
+  /models/{version}/deploy:
+    post:
+      operationId: deployModel
+      parameters: [{ name: version, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 模型已部署为 active 或 candidate }
+  /models/{task}/rollback:
+    post:
+      operationId: rollbackModel
+      parameters: [{ name: task, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 已回滚到上一 active 版本 }
+  /stream:
+    get:
+      operationId: stationWebSocket
+      parameters:
+        - name: stationId
+          in: query
+          required: true
+          schema: { type: string }
+      x-websocket: true
+      responses:
+        '101': { description: WebSocket 升级；事件符合 events.schema.json }
+components:
+  securitySchemes:
+    oidcBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    StationId:
+      name: stationId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 64 }
+    At:
+      name: at
+      in: query
+      schema: { type: string, format: date-time }
+    Range:
+      name: range
+      in: query
+      schema: { type: string, enum: [1h, 6h, 24h, 7d], default: 24h }
+    From:
+      name: from
+      in: query
+      schema: { type: string, format: date-time }
+    To:
+      name: to
+      in: query
+      schema: { type: string, format: date-time }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 5000, default: 500 }
+  responses:
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: 数据校验失败
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    Station:
+      type: object
+      required: [station_id, station_name, timezone, status]
+      properties:
+        station_id: { type: string }
+        station_name: { type: string }
+        timezone: { type: string }
+        status: { type: string, enum: [active, inactive] }
+    StationDataRange:
+      type: object
+      required: [first_event_time, last_event_time, minute_count, recognition_result_count, separation_result_count]
+      properties:
+        first_event_time: { type: [string, 'null'], format: date-time }
+        last_event_time: { type: [string, 'null'], format: date-time }
+        minute_count: { type: integer, minimum: 0 }
+        recognition_result_count: { type: integer, minimum: 0 }
+        separation_result_count: { type: integer, minimum: 0 }
+    InferenceReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        dry_run: { type: boolean, default: false }
+    InferenceReplayJob:
+      type: object
+      required: [job_id, station_id, range_start, range_end, status, dry_run, total_targets,
+        processed_targets, recognition_results, separation_results, skipped_targets, failed_targets,
+        request_id, requested_by, created_at, updated_at]
+      properties:
+        job_id: { type: string }
+        station_id: { type: string }
+        range_start: { type: string, format: date-time }
+        range_end: { type: string, format: date-time }
+        status: { type: string, enum: [queued, running, completed, failed] }
+        dry_run: { type: boolean }
+        total_targets: { type: integer, minimum: 0 }
+        processed_targets: { type: integer, minimum: 0 }
+        recognition_results: { type: integer, minimum: 0 }
+        separation_results: { type: integer, minimum: 0 }
+        skipped_targets: { type: integer, minimum: 0 }
+        failed_targets: { type: integer, minimum: 0 }
+        error_summary: { type: [string, 'null'] }
+        request_id: { type: string }
+        requested_by: { type: string }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        updated_at: { type: string, format: date-time }
+    MainSwitchMinutePoint:
+      type: object
+      additionalProperties: false
+      required: [station_id, event_time, active_power_kw, phase_a_power_kw, phase_b_power_kw, phase_c_power_kw, coverage_ratio, quality_flag, source_id]
+      properties:
+        station_id: { type: string }
+        event_time: { type: string, format: date-time }
+        active_power_kw: { type: number }
+        phase_a_power_kw: { type: number }
+        phase_b_power_kw: { type: number }
+        phase_c_power_kw: { type: number }
+        reactive_power_kvar: { type: [number, 'null'] }
+        voltage: { type: [number, 'null'] }
+        current: { type: [number, 'null'] }
+        pf: { type: [number, 'null'] }
+        coverage_ratio: { type: number, minimum: 0, maximum: 1 }
+        quality_flag: { type: string, enum: [good, warning, missing, out_of_order] }
+        source_id: { type: string }
+    RecognitionItem:
+      type: object
+      required: [kind, label, score, detected, features]
+      properties:
+        kind: { type: string, enum: [pv, energy_station, charger] }
+        label: { type: string, enum: [存在, 疑似存在, 未发现明显特征] }
+        score: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        detected: { type: [boolean, 'null'] }
+        features: { type: array, items: { type: string } }
+    RecognitionResult:
+      type: object
+      required: [result_time, window_start, window_end, model_version, quality_status, items]
+      properties:
+        result_time: { type: string, format: date-time }
+        window_start: { type: string, format: date-time }
+        window_end: { type: string, format: date-time }
+        model_version: { type: string }
+        quality_status: { type: string }
+        items:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { $ref: '#/components/schemas/RecognitionItem' }
+    SeparationResult:
+      type: object
+      required: [event_time, separation_time, result_status, total_power_kw, initial_pv_kw, corrected_pv_kw, station_feedback_value, feedback_status, correction_kw, correction_ratio, confidence, model_version, batch_id, participating_nodes, model_window_start, model_window_end, remaining_load_kw, quality_status]
+      properties:
+        event_time: { type: string, format: date-time }
+        separation_time: { type: string, format: date-time }
+        result_status: { type: string, enum: [实时初始, 等待反馈, 已反馈校正] }
+        total_power_kw: { type: number }
+        initial_pv_kw: { type: number, minimum: 0 }
+        corrected_pv_kw: { type: [number, 'null'], minimum: 0 }
+        station_feedback_value: { type: [number, 'null'] }
+        feedback_status: { type: string, enum: [已反馈, 等待回传] }
+        correction_kw: { type: [number, 'null'] }
+        correction_ratio: { type: [number, 'null'] }
+        confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        model_version: { type: string }
+        batch_id: { type: [string, 'null'] }
+        participating_nodes: { type: array, items: { type: string } }
+        model_window_start: { type: string, format: date-time }
+        model_window_end: { type: string, format: date-time }
+        remaining_load_kw: { type: number }
+        quality_status: { type: string }
+    PvFeedbackPoint:
+      type: object
+      required: [node_id, event_time, arrival_time, batch_id, pv_value, value_type, capacity_kw, quality_flag]
+      properties:
+        node_id: { type: string }
+        event_time: { type: string, format: date-time }
+        arrival_time: { type: string, format: date-time }
+        batch_id: { type: string }
+        pv_value: { type: number }
+        value_type: { type: string, enum: [average_power, energy] }
+        capacity_kw: { type: number }
+        quality_flag: { type: string }
+    FeedbackBatch:
+      type: object
+      required: [batch_id, arrival_time, coverage_start, coverage_end, interval_minutes, point_count, participant_nodes, missing_nodes, node_coverage_ratio, capacity_coverage_ratio, completeness_ratio, quality_flag]
+      properties:
+        batch_id: { type: string }
+        arrival_time: { type: string, format: date-time }
+        coverage_start: { type: string, format: date-time }
+        coverage_end: { type: string, format: date-time }
+        interval_minutes: { type: integer, minimum: 1 }
+        point_count: { type: integer, minimum: 0 }
+        participant_nodes: { type: array, items: { type: string } }
+        missing_nodes: { type: array, items: { type: string } }
+        node_coverage_ratio: { type: number, minimum: 0, maximum: 1 }
+        capacity_coverage_ratio: { type: number, minimum: 0, maximum: 1 }
+        completeness_ratio: { type: number, minimum: 0, maximum: 1 }
+        quality_flag: { type: string }
+    CorrectionRecord:
+      type: object
+      required: [correction_id, batch_id, period_start, period_end, before_kw, reference_kw, after_kw, correction_kw, confidence, reason, updated_at]
+      properties:
+        correction_id: { type: string }
+        batch_id: { type: string }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        before_kw: { type: number }
+        reference_kw: { type: number }
+        after_kw: { type: number }
+        correction_kw: { type: number }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        reason: { type: string }
+        updated_at: { type: string, format: date-time }
+    ModelHealth:
+      type: object
+      required: [recognition_status, separation_status, recognition_version, separation_version, last_inference_ms, last_inference_time, window_status]
+      properties:
+        recognition_status: { type: string, enum: [running, degraded, unavailable] }
+        separation_status: { type: string, enum: [running, degraded, unavailable] }
+        recognition_version: { type: [string, 'null'] }
+        separation_version: { type: [string, 'null'] }
+        last_inference_ms: { type: [number, 'null'] }
+        last_inference_time: { type: [string, 'null'], format: date-time }
+        window_status: { type: string, enum: [ready, warming_up, delayed, discontinuous] }
+    NodeStatus:
+      type: object
+      properties:
+        node_id: { type: string }
+        name: { type: string }
+        capacity_kw: { type: number }
+        communication_status: { type: string, enum: [online, delayed, offline] }
+        latest_event_time: { type: [string, 'null'], format: date-time }
+        latest_arrival_time: { type: [string, 'null'], format: date-time }
+        quality_flag: { type: string }
+    DataQualitySummary:
+      type: object
+      required: [completeness_ratio, duplicate_count, missing_count, out_of_order_count, warning_count, last_checked_at]
+      properties:
+        completeness_ratio: { type: number, minimum: 0, maximum: 1 }
+        duplicate_count: { type: integer, minimum: 0 }
+        missing_count: { type: integer, minimum: 0 }
+        out_of_order_count: { type: integer, minimum: 0 }
+        warning_count: { type: integer, minimum: 0 }
+        last_checked_at: { type: string, format: date-time }
+    StationSnapshot:
+      type: object
+      required: [now, station_id, station_name, minute_points, separation_results, substation_points, feedback_batches, recognition, corrections, training, model_health, node_statuses, quality]
+      properties:
+        now: { type: string, format: date-time }
+        station_id: { type: string }
+        station_name: { type: string }
+        minute_points: { type: array, items: { $ref: '#/components/schemas/MainSwitchMinutePoint' } }
+        separation_results: { type: array, items: { $ref: '#/components/schemas/SeparationResult' } }
+        substation_points: { type: array, items: { $ref: '#/components/schemas/PvFeedbackPoint' } }
+        feedback_batches: { type: array, items: { $ref: '#/components/schemas/FeedbackBatch' } }
+        recognition: { oneOf: [{ $ref: '#/components/schemas/RecognitionResult' }, { type: 'null' }] }
+        corrections: { type: array, items: { $ref: '#/components/schemas/CorrectionRecord' } }
+        training: { oneOf: [{ $ref: '#/components/schemas/TrainingRun' }, { type: 'null' }] }
+        model_health: { $ref: '#/components/schemas/ModelHealth' }
+        node_statuses: { type: array, items: { $ref: '#/components/schemas/NodeStatus' } }
+        quality: { $ref: '#/components/schemas/DataQualitySummary' }
+    CollectionProcess:
+      type: object
+      additionalProperties: true
+      required: [source, process_id, station_id, status, updated_at, sources, steps, quality, signal, events]
+      properties:
+        source: { type: string, enum: [rest-api, sse] }
+        process_id: { type: string }
+        station_id: { type: string }
+        status: { type: string, enum: [running, degraded, stopped] }
+        updated_at: { type: string, format: date-time }
+        sources: { type: array, items: { type: object } }
+        steps: { type: array, items: { type: object } }
+        quality: { $ref: '#/components/schemas/DataQualitySummary' }
+        signal: { type: array, items: { type: object } }
+        events: { type: array, items: { type: object } }
+    TrainingRun:
+      type: object
+      required: [source, run_id, station_id, status, model_version, dataset_window_days, sample_count, started_at, completed_at, validation_score, steps, epochs, release_checks]
+      properties:
+        source: { type: string, enum: [rest-api] }
+        run_id: { type: string }
+        station_id: { type: string }
+        status: { type: string, enum: [queued, running, completed, failed] }
+        model_version: { type: string }
+        dataset_window_days: { type: integer, minimum: 0 }
+        sample_count: { type: integer, minimum: 0 }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        validation_score: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        steps: { type: array, items: { type: object } }
+        epochs:
+          type: array
+          items:
+            type: object
+            required: [epoch, training_loss, validation_score]
+            properties:
+              epoch: { type: integer, minimum: 1 }
+              training_loss: { type: number }
+              validation_score: { type: number }
+        release_checks: { type: array, items: { type: object } }
+    ErrorResponse:
+      type: object
+      required: [code, message, request_id, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        details: { type: object }
+    IngestionReceipt:
+      type: object
+      required: [request_id, accepted, inserted, updated, duplicates, out_of_order, inference_scheduled]
+      properties:
+        request_id: { type: string }
+        accepted: { type: integer }
+        inserted: { type: integer }
+        updated: { type: integer }
+        duplicates: { type: integer }
+        out_of_order: { type: integer }
+        inference_scheduled: { type: boolean }
+    ImportResult:
+      type: object
+      required: [import_id, status, accepted_rows]
+      properties:
+        import_id: { type: string }
+        status: { type: string, enum: [accepted] }
+        accepted_rows: { type: integer, minimum: 0 }
+    ExportRequest:
+      type: object
+      required: [station_id, from, to, format, include]
+      properties:
+        station_id: { type: string }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        format: { type: string, enum: [csv] }
+        include: { type: array, items: { type: string, enum: [recognition_results, separation_results, feedback_batches, corrections] } }
+    MinutePointPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/MainSwitchMinutePoint' } }
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    SeparationResultPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SeparationResult' } }
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    FeedbackBatchPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/FeedbackBatch' } }
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
+    CorrectionPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CorrectionRecord' } }
+        next_cursor: { type: [string, 'null'] }
+        has_more: { type: boolean }
