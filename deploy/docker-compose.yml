@@ -45,14 +45,14 @@ services:
       context: ..
       dockerfile: backend/Dockerfile
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SECURITY_MODE: dev
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SECURITY_MODE: ${SECURITY_MODE:-dev}
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-powergrid}
       DB_USERNAME: ${POSTGRES_USER:-powergrid_dev}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-change-me}
       MODEL_SERVICE_BASE_URL: http://model-service:8000
       MODEL_SERVICE_TOKEN: ${MODEL_SERVICE_TOKEN:-local-model-token-change-me}
-      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       SPRINGDOC_ENABLED: "false"
     depends_on:
       postgres: { condition: service_healthy }

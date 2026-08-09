@@ -38,6 +38,7 @@
 **/.env
 **/.env.*
 !**/.env.example
+!deploy/.env.server.example
 **/*.local
 
 # Runtime logs
@@ -49,6 +50,8 @@ pnpm-debug.log*
 
 # Local database backups
 deploy/backups/*.dump
+deploy/releases/
+deploy/runtime-data/
 
 # Local-only generated or recovered files
 .local/

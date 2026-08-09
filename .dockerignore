@@ -1,6 +1,8 @@
 .git
 .codegraph
 .local
+deploy/releases
+deploy/runtime-data
 **/node_modules
 **/dist
 **/target

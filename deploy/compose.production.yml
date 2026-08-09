@@ -11,7 +11,7 @@ services:
       MODEL_SERVICE_TOKEN: null
     secrets:
       - source: model_service_token
-        target: MODEL_SERVICE_TOKEN
+        target: model_service_token
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: prod

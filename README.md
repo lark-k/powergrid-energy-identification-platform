@@ -26,6 +26,25 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up --build
 
 打开 `http://localhost:5173`。本地 Compose 显式使用开发认证和开发密钥；这些值不是生产默认值。生产必须叠加 `deploy/compose.production.yml`，通过 OIDC 与密钥挂载注入配置。
 
+## 携带当前历史数据部署到服务器
+
+服务器部署不能只复制代码。先从当前运行中的本地环境生成包含 PostgreSQL 历史数据、正式模型和完整训练/原始数据资产的部署包：
+
+```powershell
+python deploy/scripts/create_deployment_bundle.py
+```
+
+把仓库和生成的 `deploy/releases/powergrid-demo-*` 一起传到服务器，再执行：
+
+```bash
+python3 deploy/scripts/deploy_server.py \
+  --bundle /path/to/powergrid-demo-YYYYMMDD-HHMMSS \
+  --env-file deploy/.env.server \
+  --mode demo
+```
+
+完整的配置、生产 OIDC、备份、升级、验收和回滚步骤见 [部署与历史数据迁移手册](docs/deployment.md)。
+
 ## 独立验证
 
 ```powershell

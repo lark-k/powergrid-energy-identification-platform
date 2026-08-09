@@ -1,0 +1,17 @@
+services:
+  model-service:
+    volumes:
+      - type: bind
+        source: ${POWERGRID_DATA_DIR:?POWERGRID_DATA_DIR is required}/models/selected_model.pt
+        target: /opt/sgcc/energy_device_detection/outputs/selected_model.pt
+        read_only: true
+      - type: bind
+        source: ${POWERGRID_DATA_DIR:?POWERGRID_DATA_DIR is required}/models/selected_pv_model.pt
+        target: /opt/sgcc/energy_device_detection/pv_outputs/selected_pv_model.pt
+        read_only: true
+
+  postgres:
+    stop_grace_period: 60s
+
+  backend:
+    stop_grace_period: 45s
