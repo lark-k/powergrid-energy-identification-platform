@@ -43,7 +43,7 @@ python3 deploy/scripts/deploy_server.py \
   --mode demo
 ```
 
-完整的配置、生产 OIDC、备份、升级、验收和回滚步骤见 [部署与历史数据迁移手册](docs/deployment.md)。
+运维人员的服务器准备、数据包传输、一键恢复、验收和常用启停命令见 [外部服务器简明部署手册](docs/deployment.md)。
 
 ## 独立验证
 
