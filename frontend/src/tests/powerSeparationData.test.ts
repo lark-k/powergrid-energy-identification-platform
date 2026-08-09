@@ -30,6 +30,8 @@ describe("power separation chart data", () => {
   it("ignores absent and invalid values and formats small tick labels", () => {
     expect(powerAxisScale([null, undefined, Number.NaN])).toEqual({ min: -1, max: 1, interval: 0.5 });
     expect(powerAxisTickText(0.025)).toBe("0.025");
+    expect(powerAxisTickText(0.0035)).toBe("0.0035");
+    expect(powerAxisTickText(0.0005)).toBe("0.0005");
     expect(powerAxisTickText(30)).toBe("30");
   });
 });

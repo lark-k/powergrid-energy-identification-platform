@@ -9,6 +9,7 @@ import { powerAxisScale, powerAxisTickText, visibleMainSwitchPoints, visibleSepa
 interface Props { snapshot: StationSnapshot; range: TimeRange; onSelect: (result: SeparationResult) => void }
 const line = (name: string, color: string, width = 1.6) => ({ name, type: "line" as const, showSymbol: false, smooth: 0.22,
   itemStyle: { color }, lineStyle: { color, width, shadowBlur: 11, shadowColor: color }, emphasis: { focus: "series" as const, lineStyle: { width: width + .5 } }, animationDuration: 320 });
+const rightPanelClearance = 352;
 
 export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
   const visible = useMemo(() => {
@@ -32,11 +33,14 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
   const realtimeStart = now - 5 * 60_000;
   const isLongRange = range === "24h" || range === "7d";
   const waitingLabelY = Math.max(1, ...mainSwitch.map((point) => point.active_power_kw), ...visible.map((row) => row.total_power_kw)) * 1.045;
-  const yAxisScale = useMemo(() => powerAxisScale([
+  const mainAxisScale = useMemo(() => powerAxisScale([
     ...mainSwitch.map((point) => point.active_power_kw),
-    ...visible.flatMap((row) => [row.total_power_kw, row.initial_pv_kw, row.corrected_pv_kw, row.station_feedback_value, row.remaining_load_kw]),
+    ...visible.flatMap((row) => [row.total_power_kw, row.remaining_load_kw]),
+  ]), [mainSwitch, visible]);
+  const pvAxisScale = useMemo(() => powerAxisScale([
+    ...visible.flatMap((row) => [row.initial_pv_kw, row.corrected_pv_kw, row.station_feedback_value]),
     ...feedback.map((point) => point[1]),
-  ]), [mainSwitch, visible, feedback]);
+  ]), [visible, feedback]);
   const axisTimeText = (value: number) => {
     const date = new Date(value);
     if (range !== "7d") return timeText(date);
@@ -48,7 +52,7 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
     animation: range !== "7d",
     animationDurationUpdate: range === "7d" ? 0 : 280,
     textStyle: { color: "#dff3fb", fontFamily: "JetBrains Mono, HarmonyOS Sans SC, Microsoft YaHei UI, Microsoft YaHei, sans-serif", fontWeight: 500 },
-    grid: { left: 56, right: 294, top: 92, bottom: 52, containLabel: false },
+    grid: { left: 56, right: rightPanelClearance, top: 92, bottom: 52, containLabel: false },
     legend: {
       top: 47, left: 10, itemWidth: 24, itemHeight: 3, icon: "roundRect", selectedMode: true,
       textStyle: { color: "#cce5f0", fontSize: 11, fontWeight: 550, textShadowBlur: 5, textShadowColor: "rgba(0,8,20,.9)" }, itemGap: 22,
@@ -80,16 +84,21 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
       axisLabel: { color: "#b7d2e0", fontSize: 11, fontWeight: 550, formatter: (value: number) => axisTimeText(value) },
       splitLine: { show: true, lineStyle: { color: "rgba(92,164,205,.105)", type: "dashed" } },
     },
-    yAxis: {
-      type: "value", name: "功率 (kW)", min: yAxisScale.min, max: yAxisScale.max, interval: yAxisScale.interval,
+    yAxis: [{
+      type: "value", name: "台区功率 (kW)", min: mainAxisScale.min, max: mainAxisScale.max, interval: mainAxisScale.interval,
       nameTextStyle: { color: "#bed6e3", fontSize: 11, fontWeight: 600, padding: [0, 0, 6, 0] },
       axisLabel: { color: "#b7d2e0", fontSize: 11, fontWeight: 550, formatter: powerAxisTickText },
       splitLine: { lineStyle: { color: "rgba(92,164,205,.11)" } }, axisLine: { show: false }, axisTick: { show: false },
-    },
+    }, {
+      type: "value", name: "光伏功率 (kW)", position: "right", min: pvAxisScale.min, max: pvAxisScale.max, interval: pvAxisScale.interval,
+      nameTextStyle: { color: "#78a8ff", fontSize: 11, fontWeight: 650, padding: [0, 0, 6, 0] },
+      axisLabel: { color: "#78a8ff", fontSize: 11, fontWeight: 600, formatter: powerAxisTickText },
+      splitLine: { show: false }, axisLine: { show: true, lineStyle: { color: "rgba(77,137,255,.42)" } }, axisTick: { show: false },
+    }],
     dataZoom: [{ type: "inside", xAxisIndex: 0, filterMode: "none" }, { type: "slider", height: 8, bottom: 8, borderColor: "transparent",
       backgroundColor: "rgba(38,85,120,.22)", fillerColor: "rgba(25,211,255,.2)", dataBackground: { lineStyle: { color: "rgba(121,211,255,.46)" }, areaStyle: { color: "rgba(58,120,255,.16)" } }, selectedDataBackground: { lineStyle: { color: "#70eaff" }, areaStyle: { color: "rgba(36,245,181,.14)" } }, handleStyle: { color: "#77efff", borderColor: "rgba(220,251,255,.8)", shadowBlur: 8, shadowColor: COLOR.cyan }, showDetail: false }],
     graphic: isLongRange ? [{
-      type: "text", right: 304, top: 74, z: 20, silent: true,
+      type: "text", right: rightPanelClearance + 10, top: 74, z: 20, silent: true,
       style: { text: "等待反馈区", fill: "#ffd584", font: "700 12px HarmonyOS Sans SC, Microsoft YaHei, sans-serif", backgroundColor: "rgba(42,28,9,.86)", borderColor: "rgba(255,193,92,.58)", borderWidth: 1, borderRadius: 3, padding: [4, 7], shadowBlur: 10, shadowColor: "rgba(255,184,77,.28)" },
     }] : [],
     series: [
@@ -107,22 +116,22 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
             { xAxis: realtimeStart, lineStyle: { color: "rgba(255,193,92,.7)", width: 1, type: "dashed", shadowBlur: 8, shadowColor: COLOR.amber }, label: { show: false } },
             { xAxis: now, lineStyle: { color: "#65eaff", width: 2, shadowBlur: 18, shadowColor: COLOR.cyan }, label: { show: true, formatter: `NOW\n${timeText(snapshot.now)}`, color: "#6decff", fontSize: 12, fontWeight: 750, borderColor: "rgba(101,234,255,.46)", borderWidth: 1, position: "insideEndBottom" } },
           ] } },
-      { ...line("初始光伏", "#4d89ff", 1.65), z: 4, sampling: sevenDaySampling, data: visible.map((row) => [new Date(row.event_time).getTime(), row.initial_pv_kw]) },
-      { ...line("校正后光伏", "#4ff6b8", 2.2), z: 6, sampling: sevenDaySampling, connectNulls: false, data: visible.map((row) => [new Date(row.event_time).getTime(), row.corrected_pv_kw]),
+      { ...line("初始光伏", "#4d89ff", 1.65), yAxisIndex: 1, z: 4, sampling: sevenDaySampling, data: visible.map((row) => [new Date(row.event_time).getTime(), row.initial_pv_kw]) },
+      { ...line("校正后光伏", "#4ff6b8", 2.2), yAxisIndex: 1, z: 6, sampling: sevenDaySampling, connectNulls: false, data: visible.map((row) => [new Date(row.event_time).getTime(), row.corrected_pv_kw]),
         areaStyle: { color: "rgba(36,245,181,.065)" } },
       { ...line("剩余负荷", COLOR.violet, 1.2), sampling: sevenDaySampling, lineStyle: { color: COLOR.violet, width: 1.2, type: "dashed", opacity: .74 }, data: visible.map((row) => [new Date(row.event_time).getTime(), row.remaining_load_kw]) },
-      { name: "分站反馈", type: "line", step: "end", symbol: "diamond", symbolSize: range === "7d" ? 6 : 9, showSymbol: true,
+      { name: "分站反馈", type: "line", yAxisIndex: 1, step: "end", symbol: "diamond", symbolSize: range === "7d" ? 6 : 9, showSymbol: true,
         itemStyle: { color: "#ffc15c", borderColor: "#ffe2a8", borderWidth: 1, shadowBlur: range === "7d" ? 0 : 14, shadowColor: COLOR.amber }, lineStyle: { color: "#ffc15c", width: 1.3, type: "dashed", shadowBlur: range === "7d" ? 0 : 8, shadowColor: COLOR.amber }, data: feedback },
       ...(range === "6h" ? [{ name: "等待反馈区标注", type: "scatter" as const, silent: true, z: 20, symbolSize: 1,
         itemStyle: { color: "rgba(0,0,0,0)" }, data: [[(correctedEnd + realtimeStart) / 2, waitingLabelY]],
         label: { show: true, formatter: "等待反馈区", position: "bottom" as const, distance: 10, color: "#ffd584", fontSize: 13, fontWeight: 700, backgroundColor: "rgba(42,28,9,.86)", borderColor: "rgba(255,193,92,.58)", borderWidth: 1, borderRadius: 3, padding: [4, 7], textShadowBlur: 10, textShadowColor: "rgba(255,184,77,.3)" } }] : []),
     ],
-  }), [visible, mainSwitch, feedback, now, correctedEnd, realtimeStart, isLongRange, waitingLabelY, yAxisScale, resultMap, minuteMap, snapshot, range]);
+  }), [visible, mainSwitch, feedback, now, correctedEnd, realtimeStart, isLongRange, waitingLabelY, mainAxisScale, pvAxisScale, resultMap, minuteMap, snapshot, range]);
 
   const handleClick = useCallback((params: unknown) => {
     const point = params as { data?: [number, number] }; const timestamp = Number(point.data?.[0]);
     const result = resultMap.get(timestamp); if (result) onSelect(result);
   }, [resultMap, onSelect]);
 
-  return <EChart key={range} option={option} onClick={handleClick} className="power-chart" ariaLabel="台区总功率与光伏功率分离核心曲线" />;
+  return <EChart key={range} option={option} onClick={handleClick} preserveTooltipOnUpdate className="power-chart" ariaLabel="台区总功率与光伏功率分离核心曲线" />;
 }

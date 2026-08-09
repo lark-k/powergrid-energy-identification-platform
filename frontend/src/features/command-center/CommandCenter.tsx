@@ -16,10 +16,10 @@ import { StartupTransition } from "../../components/overlays/StartupTransition";
 import { PipelineFlow } from "../pipeline/PipelineFlow";
 
 export function CommandCenter() {
-  const { now, snapshot, stations, stationId, range, viewMode, historyAt, dataRange, selected, connection, error, load, advance, connect, setStation, setRange, setHistoryAt, goLive, selectResult, setDrawer, settings } = useDemoStore();
+  const { now, snapshot, stationId, range, viewMode, historyAt, dataRange, selected, connection, error, load, advance, connect, setRange, setHistoryAt, goLive, selectResult, setDrawer, settings } = useDemoStore();
   const [showStartup, setShowStartup] = useState(true);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => connect(), [connect, stationId]);
+  useEffect(() => viewMode === "live" ? connect() : undefined, [connect, stationId, viewMode]);
   useEffect(() => { const timer = window.setInterval(() => void advance(), SYSTEM_CONFIG.demoTickMs); return () => window.clearInterval(timer); }, [advance]);
   const latestCorrected = useMemo(() => snapshot ? [...snapshot.separation_results].reverse().find((result) => result.correction_kw != null) ?? null : null, [snapshot]);
   const dataDelayed = useMemo(() => {
@@ -32,8 +32,8 @@ export function CommandCenter() {
   return <main className={`command-center ${settings.reducedEffects ? "reduced-effects" : ""} ${showStartup ? "startup-active" : ""}`}>
     {snapshot && <>
       <div className="ambient-scan" aria-hidden="true" />
-      <Header stationName={snapshot.station_name} stations={stations} stationId={stationId} connection={connection} now={now.toISOString()} range={range}
-        viewMode={viewMode} historyAt={historyAt} dataRange={dataRange} setStation={setStation} setRange={setRange} setHistoryAt={setHistoryAt} goLive={goLive} />
+      <Header connection={connection} now={now.toISOString()} range={range}
+        viewMode={viewMode} historyAt={historyAt} dataRange={dataRange} setRange={setRange} setHistoryAt={setHistoryAt} goLive={goLive} />
       {(error || connection !== "online" || dataDelayed || warming) && <div className={`system-state ${connection}`} role="status">
         {error?.message ?? (connection === "connecting" ? "正在连接 Java 业务后台" : connection === "degraded" ? "模型服务或数据链路处于降级状态，页面不会使用 Mock 结果" : connection === "offline" ? "业务后台离线，正在自动重连" : warming ? "模型窗口尚未预热完成，缺失结果保持为空" : "总开分钟数据到达延迟超过 2 分钟")}
         {error?.requestId && <small>request_id: {error.requestId}</small>}

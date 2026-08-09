@@ -45,7 +45,8 @@ export const powerAxisScale = (values: Array<number | null | undefined>): PowerA
 
 export const powerAxisTickText = (value: number) => {
   const absolute = Math.abs(value);
-  const maximumFractionDigits = absolute >= 10 ? 0 : absolute >= 1 ? 1 : absolute >= 0.1 ? 2 : 3;
+  const maximumFractionDigits = absolute >= 10 ? 0 : absolute >= 1 ? 1 : absolute >= 0.1 ? 2
+    : absolute >= 0.01 ? 3 : absolute >= 0.001 ? 4 : 6;
   return value.toLocaleString(undefined, { maximumFractionDigits });
 };
 
