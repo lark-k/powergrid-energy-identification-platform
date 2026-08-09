@@ -96,6 +96,11 @@ public class StationDataController {
     @GetMapping("/models/health") public Map<String, Object> health(@PathVariable String stationId) { return service.modelHealthForStation(stationId); }
     @GetMapping("/process/collection") public Map<String, Object> collection(@PathVariable String stationId) { return service.collectionProcess(stationId); }
 
+    @GetMapping("/training-runs")
+    public List<Map<String, Object>> trainingRuns(@PathVariable String stationId) {
+        return service.trainingRuns(stationId);
+    }
+
     @GetMapping("/training-runs/latest")
     public Map<String, Object> training(@PathVariable String stationId) {
         Map<String, Object> run = service.latestTraining(stationId);

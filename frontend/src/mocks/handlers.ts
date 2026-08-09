@@ -12,6 +12,7 @@ export const handlers = [
   http.get("/api/v1/stations/:stationId/corrections", () => HttpResponse.json(mockSnapshot().corrections)),
   http.get("/api/v1/stations/:stationId/results", () => HttpResponse.json(mockSnapshot().separation_results)),
   http.get("/api/v1/stations/:stationId/process/collection", () => HttpResponse.json(collectionProcessFromSnapshot(mockSnapshot()))),
+  http.get("/api/v1/stations/:stationId/training-runs", () => HttpResponse.json([trainingProcessFromSnapshot(mockSnapshot())])),
   http.get("/api/v1/stations/:stationId/training-runs/latest", () => HttpResponse.json(trainingProcessFromSnapshot(mockSnapshot()))),
   http.post("/api/v1/imports", () => HttpResponse.json({ import_id: "IMP-MOCK-001", status: "complete" })),
   http.post("/api/v1/exports", () => HttpResponse.json({ export_id: "EXP-MOCK-001", status: "ready" })),

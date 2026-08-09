@@ -198,12 +198,17 @@ export interface TrainingProcessRun {
   run_id: string;
   station_id: string;
   status: "queued" | "running" | "completed" | "failed";
+  model_task: "resource_identification" | "pv_separation";
   model_version: string;
   dataset_window_days: number;
+  window_size_minutes: number;
   sample_count: number;
   started_at: string;
   completed_at: string | null;
   validation_score: number | null;
+  metric_name: "macro_f1" | "activity_f1" | string;
+  metric_value: number | null;
+  validation_series_name: string;
   steps: Array<{
     step_id: string;
     name: string;
@@ -216,7 +221,8 @@ export interface TrainingProcessRun {
   epochs: Array<{
     epoch: number;
     training_loss: number;
-    validation_score: number;
+    validation_loss: number | null;
+    validation_score: number | null;
   }>;
   release_checks: Array<{
     check_id: string;

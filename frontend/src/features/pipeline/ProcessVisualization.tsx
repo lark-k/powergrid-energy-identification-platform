@@ -6,6 +6,7 @@ import {
   CheckCircle,
   ClockCounterClockwise,
   CloudArrowUp,
+  Cpu,
   Database,
   Funnel,
   HardDrives,
@@ -13,6 +14,7 @@ import {
   SealCheck,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkle,
   Stack,
   X,
 } from "@phosphor-icons/react";
@@ -44,19 +46,15 @@ const timeText = (value: string) => new Date(value).toLocaleTimeString("zh-CN", 
   hour12: false,
 });
 
-const dateTimeText = (value: string) => new Date(value).toLocaleString("zh-CN", {
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
 const axisLabel = {
   color: "#7897aa",
   fontSize: 9,
   fontFamily: "JetBrains Mono, Consolas, monospace",
 };
+
+const trainingTaskText = (task: TrainingProcessRun["model_task"]) => task === "pv_separation" ? "光伏功率分离" : "能源特征辨识";
+const trainingTaskShortText = (task: TrainingProcessRun["model_task"]) => task === "pv_separation" ? "光伏分离" : "特征辨识";
+const metricText = (name: string) => name === "activity_f1" ? "光伏活动 F1" : name === "macro_f1" ? "验证 Macro F1" : "最终验证指标";
 
 const stepStateText: Record<ProcessStepStatus, string> = {
   waiting: "等待中",
@@ -70,7 +68,15 @@ function ProcessSteps({
   steps,
 }: {
   mode: VisualizedStage;
-  steps: Array<{ step_id: string; name: string; description: string; status: ProcessStepStatus }>;
+  steps: Array<{
+    step_id: string;
+    name: string;
+    description: string;
+    status: ProcessStepStatus;
+    processed_count?: number;
+    latency_ms?: number;
+    progress?: number;
+  }>;
 }) {
   const icons = mode === "collection"
     ? [Broadcast, ClockCounterClockwise, ShieldCheck, HardDrives]
@@ -91,6 +97,12 @@ function ProcessSteps({
               <CheckCircle weight="fill" />
               {stepStateText[step.status]}
             </span>
+            {step.processed_count != null && step.latency_ms != null && (
+              <span className="process-step-metric">{step.processed_count.toLocaleString()} 条 · {step.latency_ms} ms</span>
+            )}
+            {step.progress != null && (
+              <span className="process-step-progress"><i style={{ width: `${Math.round(step.progress * 100)}%` }} /></span>
+            )}
           </div>
           {index < steps.length - 1 && (
             <span className="process-connector" aria-hidden="true">
@@ -113,6 +125,7 @@ function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }
     const points = telemetry.signal;
     return {
       animationDuration: 700,
+      animationDurationUpdate: 520,
       grid: { left: 8, right: 12, top: 28, bottom: 4, containLabel: true },
       tooltip: {
         trigger: "axis",
@@ -180,7 +193,11 @@ function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }
           </div>
         </section>
         <section className="process-panel signal-panel">
-          <header><span><Pulse weight="duotone" />总开原始信号</span><small>LAST 42 MINUTES</small></header>
+          <header>
+            <span><Pulse weight="duotone" />总开原始信号</span>
+            <span className="panel-live-tag"><i /> {timeText(telemetry.updated_at)} 更新</span>
+            <small>LIVE · LAST 42 MINUTES</small>
+          </header>
           <EChart option={signalOption} className="process-chart" ariaLabel="最近四十二分钟总开原始功率信号" />
         </section>
         <section className="process-panel event-panel">
@@ -200,19 +217,63 @@ function CollectionView({ telemetry }: { telemetry: CollectionProcessTelemetry }
   );
 }
 
-function TrainingView({ run }: { run: TrainingProcessRun }) {
+function TrainingView({
+  run,
+  runs,
+  onRunChange,
+}: {
+  run: TrainingProcessRun;
+  runs: TrainingProcessRun[];
+  onRunChange: (runId: string) => void;
+}) {
+  const [visibleEpochs, setVisibleEpochs] = useState(1);
+
+  useEffect(() => {
+    setVisibleEpochs(1);
+    if (run.epochs.length < 2) return;
+    let timer: number | null = null;
+    let cancelled = false;
+    const advance = (current: number) => {
+      if (cancelled) return;
+      const next = current >= run.epochs.length ? 1 : current + 1;
+      const delay = current >= run.epochs.length ? 3200 : 520;
+      timer = window.setTimeout(() => {
+        if (cancelled) return;
+        setVisibleEpochs(next);
+        advance(next);
+      }, delay);
+    };
+    advance(1);
+    return () => {
+      cancelled = true;
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, [run.run_id, run.epochs.length]);
+
+  const displayedEpochs = run.epochs.slice(0, visibleEpochs);
+  const currentEpoch = displayedEpochs.at(-1);
+  const trainingProgress = run.epochs.length ? visibleEpochs / run.epochs.length : 0;
+  const activeStepIndex = Math.min(run.steps.length - 1, Math.floor(trainingProgress * run.steps.length));
+  const replaySteps = run.steps.map((step, index) => ({
+    ...step,
+    status: index < activeStepIndex ? "completed" as const : index === activeStepIndex ? "running" as const : "waiting" as const,
+    progress: index < activeStepIndex ? 1 : index === activeStepIndex ? Math.min(1, trainingProgress * run.steps.length - index) : 0,
+  }));
+
   const convergenceOption = useMemo<EChartsOption>(() => {
-    const epochs = run.epochs.map((point) => `E${point.epoch}`);
+    const epochs = displayedEpochs.map((point) => `E${point.epoch}`);
+    const validationSeriesName = run.validation_series_name || "验证损失";
     return {
-      animationDuration: 1000,
+      animationDuration: 650,
+      animationDurationUpdate: 420,
       animationEasing: "cubicOut",
-      grid: { left: 10, right: 12, top: 34, bottom: 5, containLabel: true },
-      legend: { top: 3, right: 4, itemWidth: 12, itemHeight: 2, textStyle: { color: "#91afc1", fontSize: 9 }, data: ["验证得分", "损失"] },
+      grid: { left: 12, right: 18, top: 42, bottom: 10, containLabel: true },
+      legend: { top: 8, right: 10, itemWidth: 18, itemHeight: 3, textStyle: { color: "#a9bed0", fontSize: 10 }, data: [validationSeriesName, "训练损失"] },
       tooltip: {
         trigger: "axis",
         backgroundColor: "rgba(3, 15, 32, .96)",
         borderColor: "rgba(168, 121, 255, .38)",
-        textStyle: { color: "#e9e0ff", fontSize: 10 },
+        textStyle: { color: "#e9e0ff", fontSize: 11 },
       },
       xAxis: {
         type: "category",
@@ -222,54 +283,87 @@ function TrainingView({ run }: { run: TrainingProcessRun }) {
         axisLabel,
       },
       yAxis: [
-        { type: "value", min: 0.65, max: 1, splitNumber: 3, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value * 100)}%` }, splitLine: { lineStyle: { color: "rgba(137, 107, 183, .1)", type: "dashed" } } },
-        { type: "value", min: 0, max: 0.75, show: false },
+        { type: "value", scale: true, splitNumber: 4, axisLabel: { ...axisLabel, formatter: (value: number) => value.toFixed(value >= 1 ? 1 : 2) }, splitLine: { lineStyle: { color: "rgba(137, 107, 183, .1)", type: "dashed" } } },
+        { type: "value", scale: true, show: false },
       ],
       series: [
-        { name: "验证得分", type: "line", data: run.epochs.map((point) => point.validation_score), smooth: 0.35, showSymbol: false, lineStyle: { color: "#b68aff", width: 2, shadowColor: "rgba(168, 121, 255, .55)", shadowBlur: 9 }, areaStyle: { color: "rgba(139, 92, 255, .08)" } },
-        { name: "损失", type: "line", yAxisIndex: 1, data: run.epochs.map((point) => point.training_loss), smooth: 0.35, showSymbol: false, lineStyle: { color: "#4be7ff", width: 1.5, type: "dashed" } },
+        { name: validationSeriesName, type: "line", data: displayedEpochs.map((point) => point.validation_loss), smooth: 0.35, showSymbol: false, lineStyle: { color: "#bd8cff", width: 2.4, shadowColor: "rgba(168, 121, 255, .72)", shadowBlur: 12 }, areaStyle: { color: "rgba(139, 92, 255, .12)" } },
+        { name: "训练损失", type: "line", yAxisIndex: 1, data: displayedEpochs.map((point) => point.training_loss), smooth: 0.35, showSymbol: false, lineStyle: { color: "#4be7ff", width: 1.8, type: "dashed", shadowColor: "rgba(75,231,255,.4)", shadowBlur: 8 } },
       ],
     };
-  }, [run.epochs]);
+  }, [displayedEpochs, run.validation_series_name]);
 
-  const validationScore = run.validation_score ?? 0;
+  const metricValue = run.metric_value ?? run.validation_score ?? 0;
+  const bestValidationLoss = displayedEpochs.reduce<number | null>((best, epoch) => {
+    if (epoch.validation_loss == null) return best;
+    return best == null ? epoch.validation_loss : Math.min(best, epoch.validation_loss);
+  }, null);
 
   return (
     <>
       <div className="process-kpis training-kpis">
-        <div><span>模型版本</span><strong>{run.model_version}</strong></div>
-        <div><span>训练窗口</span><strong>{run.dataset_window_days}<small> 天</small></strong></div>
-        <div><span>有效样本</span><strong>{run.sample_count.toLocaleString()}<small> 条</small></strong></div>
-        <div className="accent"><span>最终验证得分</span><strong>{run.validation_score == null ? "等待接口" : percentText(run.validation_score)}</strong></div>
+        <div className="training-model-selector">
+          <span>真实训练任务</span>
+          <nav aria-label="切换真实训练任务">
+            {runs.map((item) => (
+              <button key={item.run_id} className={item.run_id === run.run_id ? "active" : ""} onClick={() => onRunChange(item.run_id)}>
+                {trainingTaskShortText(item.model_task)}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div><span>当前训练轮次</span><strong>{String(currentEpoch?.epoch ?? 0).padStart(2, "0")}<small> / {run.epochs.length} EPOCH</small></strong></div>
+        <div><span>当前训练损失</span><strong>{currentEpoch?.training_loss.toFixed(3) ?? "--"}<small> LOSS</small></strong></div>
+        <div><span>有效训练样本</span><strong>{run.sample_count.toLocaleString()}<small> 条</small></strong></div>
+        <div className="accent"><span>{metricText(run.metric_name)}</span><strong>{percentText(metricValue)}</strong></div>
       </div>
-      <ProcessSteps mode="training" steps={run.steps} />
+      <ProcessSteps mode="training" steps={replaySteps} />
       <div className="training-detail-grid">
         <section className="process-panel convergence-panel">
-          <header><span><Brain weight="duotone" />训练收敛回放</span><small>OFFLINE RUN REPLAY</small></header>
+          <header>
+            <span><Brain weight="duotone" />模型收敛曲线</span>
+            <span className="panel-live-tag"><i /> EPOCH {currentEpoch?.epoch ?? 0} / {run.epochs.length}</span>
+            <small>REAL TRAINING HISTORY</small>
+          </header>
           {run.epochs.length
             ? <EChart option={convergenceOption} className="process-chart" ariaLabel="最近一次离线训练收敛轨迹" />
             : <div className="process-empty"><Pulse weight="duotone" /><b>等待 epoch 指标</b><span>训练接口返回记录后将在此绘制真实收敛轨迹</span></div>}
-          <p>曲线直接读取训练过程接口返回的 epoch 指标。</p>
-        </section>
-        <section className="process-panel release-panel">
-          <header><span><CloudArrowUp weight="duotone" />版本发布清单</span><small>RELEASE GATE</small></header>
-          <div className="release-score">
-            <span><i style={{ "--score": `${validationScore * 100}%` } as CSSProperties} /></span>
-            <strong>{run.validation_score == null ? "--" : percentText(run.validation_score)}<small>验证得分</small></strong>
+          <div className="epoch-ticker" aria-live="polite">
+            <span>训练进度</span>
+            <i><b style={{ width: `${trainingProgress * 100}%` }} /></i>
+            <strong>{Math.round(trainingProgress * 100)}%</strong>
+            <small>真实训练日志逐 Epoch 回放</small>
           </div>
-          <div className="release-checks">
-            {run.release_checks.map((check) => (
-              <span key={check.check_id}>
-                <CheckCircle weight="fill" />{check.name}
-                <b>{check.status === "passed" ? "通过" : check.status === "failed" ? "失败" : "等待"}</b>
-              </span>
-            ))}
-          </div>
-          <footer>
-            <span>完成时间<time>{run.completed_at ? dateTimeText(run.completed_at) : "训练进行中"}</time></span>
-            <span>发布版本<b>{run.model_version}</b></span>
-          </footer>
         </section>
+        <div className="training-side-stack">
+          <section className="process-panel runtime-panel">
+            <header><span><Cpu weight="duotone" />训练运行监控</span><small>RUN TELEMETRY</small></header>
+            <div className="runtime-focus">
+              <span className="runtime-orbit"><Sparkle weight="fill" /></span>
+              <div><small>{trainingTaskText(run.model_task)}</small><strong>{run.model_version}</strong><span>{run.window_size_minutes} 分钟因果窗口 · {run.sample_count.toLocaleString()} 训练样本</span></div>
+            </div>
+            <div className="runtime-metrics">
+              <span><small>最佳验证值</small><b>{bestValidationLoss?.toFixed(3) ?? "--"}</b></span>
+              <span><small>最低训练损失</small><b>{displayedEpochs.length ? Math.min(...displayedEpochs.map((item) => item.training_loss)).toFixed(3) : "--"}</b></span>
+              <span><small>运行状态</small><b className="good">已完成</b></span>
+            </div>
+          </section>
+          <section className="process-panel release-panel">
+            <header><span><CloudArrowUp weight="duotone" />模型发布评估</span><small>RELEASE GATE</small></header>
+            <div className="release-score">
+              <span><i style={{ "--score": `${metricValue * 100}%` } as CSSProperties} /></span>
+              <strong>{percentText(metricValue)}<small>{metricText(run.metric_name)}</small></strong>
+            </div>
+            <div className="release-checks">
+              {run.release_checks.map((check) => (
+                <span key={check.check_id}>
+                  <CheckCircle weight="fill" />{check.name}
+                  <b>{check.status === "passed" ? "通过" : check.status === "failed" ? "失败" : "等待"}</b>
+                </span>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </>
   );
@@ -278,7 +372,8 @@ function TrainingView({ run }: { run: TrainingProcessRun }) {
 export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: ProcessVisualizationProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [collectionTelemetry, setCollectionTelemetry] = useState<CollectionProcessTelemetry | null>(null);
-  const [trainingRun, setTrainingRun] = useState<TrainingProcessRun | null>(null);
+  const [trainingRuns, setTrainingRuns] = useState<TrainingProcessRun[]>([]);
+  const [selectedTrainingRunId, setSelectedTrainingRunId] = useState<string | null>(null);
   const [trainingLoaded, setTrainingLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -309,19 +404,25 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
       };
     }
 
-    void processAdapter.getLatestTrainingRun(snapshot.station_id)
-      .then((run) => { if (!disposed) { setTrainingRun(run); setTrainingLoaded(true); } })
+    void processAdapter.getTrainingRuns(snapshot.station_id)
+      .then((runs) => {
+        if (disposed) return;
+        setTrainingRuns(runs);
+        setSelectedTrainingRunId((current) => runs.some((run) => run.run_id === current) ? current : runs[0]?.run_id ?? null);
+        setTrainingLoaded(true);
+      })
       .catch(() => { if (!disposed) setLoadError("训练过程接口暂不可用"); });
     return () => { disposed = true; };
   }, [mode, snapshot.now, snapshot.station_id]);
 
   const isCollection = mode === "collection";
+  const trainingRun = trainingRuns.find((run) => run.run_id === selectedTrainingRunId) ?? trainingRuns[0] ?? null;
   const currentData = isCollection ? collectionTelemetry : trainingRun;
   const currentSource: ProcessDataSource | undefined = currentData?.source;
   const sourceLabel = currentSource === "mock-api" ? "MOCK API" : currentSource === "sse" ? "SSE STREAM" : "REST API";
   const runState = isCollection
     ? collectionTelemetry?.status === "degraded" ? "链路降级" : "实时运行"
-    : trainingRun?.status === "running" ? "离线训练中" : "最近一次离线训练";
+    : trainingRun?.status === "running" ? "离线训练中" : "真实训练已完成";
 
   return (
     <div className={`process-visualization-backdrop ${mode}`} onMouseDown={onClose}>
@@ -354,7 +455,7 @@ export function ProcessVisualization({ mode, snapshot, onModeChange, onClose }: 
           ) : isCollection && collectionTelemetry ? (
             <CollectionView telemetry={collectionTelemetry} />
           ) : !isCollection && trainingRun ? (
-            <TrainingView run={trainingRun} />
+            <TrainingView run={trainingRun} runs={trainingRuns} onRunChange={setSelectedTrainingRunId} />
           ) : !isCollection && trainingLoaded ? (
             <div className="process-load-state"><Pulse weight="duotone" /><b>暂无真实训练运行记录</b><span>training_epoch 为空，因此不绘制或推测训练曲线</span></div>
           ) : (

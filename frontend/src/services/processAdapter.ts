@@ -5,7 +5,7 @@ import { apiRequest, authHeaders } from "./http";
 
 export interface ProcessDataAdapter {
   getCollectionProcess(stationId: string, at?: Date): Promise<CollectionProcessTelemetry>;
-  getLatestTrainingRun(stationId: string): Promise<TrainingProcessRun | null>;
+  getTrainingRuns(stationId: string): Promise<TrainingProcessRun[]>;
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void): () => void;
 }
 
@@ -71,6 +71,7 @@ export const trainingProcessFromSnapshot = (snapshot: StationSnapshot): Training
     return {
       epoch: index + 1,
       training_loss: Number((0.62 * Math.exp(-index / 3.25) + 0.085).toFixed(3)),
+      validation_loss: Number((0.48 * Math.exp(-index / 3.4) + 0.075).toFixed(3)),
       validation_score: index === 11 ? target : Number((0.71 + (target - 0.71) * progress).toFixed(3)),
     };
   });
@@ -79,13 +80,18 @@ export const trainingProcessFromSnapshot = (snapshot: StationSnapshot): Training
     source: "mock-api",
     run_id: `TRAIN-${snapshot.station_id}-${completedAt.getTime()}`,
     station_id: snapshot.station_id,
-    status: snapshot.training.status,
+    status: snapshot.training.status === "training" ? "running" : snapshot.training.status,
+    model_task: "resource_identification",
     model_version: snapshot.training.model_version,
     dataset_window_days: snapshot.training.dataset_window_days,
+    window_size_minutes: 120,
     sample_count: snapshot.training.sample_count,
     started_at: startedAt.toISOString(),
     completed_at: snapshot.training.completed_at,
     validation_score: snapshot.training.validation_score,
+    metric_name: "macro_f1",
+    metric_value: snapshot.training.validation_score,
+    validation_series_name: "验证损失",
     steps: [
       ["sample", "样本准备", "训练窗口装载"],
       ["clean", "清洗切片", "异常样本剔除"],
@@ -115,8 +121,8 @@ class MockProcessAdapter implements ProcessDataAdapter {
     return collectionProcessFromSnapshot(snapshotAt(at));
   }
 
-  async getLatestTrainingRun(_stationId: string) {
-    return trainingProcessFromSnapshot(snapshotAt(new Date()));
+  async getTrainingRuns(_stationId: string) {
+    return [trainingProcessFromSnapshot(snapshotAt(new Date()))];
   }
 
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void) {
@@ -136,12 +142,8 @@ class HttpProcessAdapter implements ProcessDataAdapter {
     return this.request<CollectionProcessTelemetry>(`/api/v1/stations/${encodeURIComponent(stationId)}/process/collection`);
   }
 
-  getLatestTrainingRun(stationId: string) {
-    return this.request<TrainingProcessRun>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs/latest`)
-      .catch((error: unknown) => {
-        if (typeof error === "object" && error && "status" in error && error.status === 404) return null;
-        throw error;
-      });
+  getTrainingRuns(stationId: string) {
+    return this.request<TrainingProcessRun[]>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs`);
   }
 
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void) {
@@ -193,5 +195,5 @@ export const processAdapter: ProcessDataAdapter = SYSTEM_CONFIG.sourceMode === "
 
 // Backend contract reserved for direct replacement:
 // GET /api/v1/stations/{stationId}/process/collection
-// GET /api/v1/stations/{stationId}/training-runs/latest
+// GET /api/v1/stations/{stationId}/training-runs
 // SSE /api/v1/stations/{stationId}/process/collection/stream (event: telemetry)

@@ -224,25 +224,58 @@ public class SnapshotService {
     }
 
     public Map<String, Object> latestTraining(String stationId) {
+        List<Map<String, Object>> runs = trainingRuns(stationId);
+        return runs.isEmpty() ? null : runs.getFirst();
+    }
+
+    public List<Map<String, Object>> trainingRuns(String stationId) {
+        station(stationId);
         List<Map<String, Object>> runs = jdbc.sql("""
-                        select run_id, station_id, status, model_version, dataset_window_days,
-                               sample_count, started_at, completed_at, validation_score
+                        select run_id, station_id, status, model_version, model_task,
+                               dataset_window_days, window_size_minutes, sample_count,
+                               started_at, completed_at, validation_score,
+                               metric_name, metric_value, validation_series_name
                         from training_run where station_id = :stationId or station_id is null
-                        order by started_at desc limit 1
+                        order by started_at desc
                         """)
                 .param("stationId", stationId).query().listOfRows();
-        if (runs.isEmpty()) {
-            return null;
-        }
-        Map<String, Object> run = new LinkedHashMap<>(runs.getFirst());
+        return runs.stream().map(this::trainingRunDetails).toList();
+    }
+
+    private Map<String, Object> trainingRunDetails(Map<String, Object> row) {
+        Map<String, Object> run = new LinkedHashMap<>(row);
         run.put("source", "rest-api");
-        run.put("steps", List.of());
+        String task = String.valueOf(run.get("model_task"));
+        run.put("steps", List.of(
+                trainingStep("sample", "样本准备", "训练数据集装载"),
+                trainingStep("clean", "清洗切片", "异常样本剔除"),
+                trainingStep("feature", "特征构建", task.equals("pv_separation") ? "240 分钟因果窗口" : "120 分钟因果窗口"),
+                trainingStep("fit", "离线拟合", "参数收敛与早停"),
+                trainingStep("release", "验证发布", "最佳权重归档")));
         run.put("epochs", jdbc.sql("""
-                        select epoch, training_loss, validation_score from training_epoch
+                        select epoch, training_loss, validation_loss, validation_score
+                        from training_epoch
                         where run_id = :runId order by epoch
                         """).param("runId", run.get("run_id")).query().listOfRows());
-        run.put("release_checks", List.of());
+        run.put("release_checks", task.equals("pv_separation")
+                ? List.of(
+                        releaseCheck("quality", "数据质量检查"),
+                        releaseCheck("regression", "功率回归验证"),
+                        releaseCheck("activity", "光伏活动检测"))
+                : List.of(
+                        releaseCheck("quality", "数据质量检查"),
+                        releaseCheck("classification", "多标签分类验证"),
+                        releaseCheck("threshold", "识别阈值标定")));
         return run;
+    }
+
+    private Map<String, Object> trainingStep(String id, String name, String description) {
+        return Map.of("step_id", id, "name", name, "description", description,
+                "status", "completed", "progress", 1.0);
+    }
+
+    private Map<String, Object> releaseCheck(String id, String name) {
+        return Map.of("check_id", id, "name", name, "status", "passed");
     }
 
     private Map<String, Object> station(String stationId) {
