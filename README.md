@@ -61,7 +61,7 @@ npm.cmd run build
 npm.cmd run test:sites
 ```
 
-详见 [本地开发](docs/local-development.md)、[部署](docs/deployment.md)、[安全配置](docs/security.md)、[模型替换与回滚](docs/model-replacement.md)、[当前模型边界](docs/current-model-boundaries.md)、[内部模型接口](docs/internal-model-interface.md)、[数据字典](docs/data-dictionary.md)、[故障排查](docs/troubleshooting.md)和[验收报告](docs/acceptance-report.md)。
+首次了解系统可先阅读 [界面使用说明](docs/界面使用说明_README.md)。开发和运维资料详见 [本地开发](docs/local-development.md)、[部署](docs/deployment.md)、[安全配置](docs/security.md)、[模型替换与回滚](docs/model-replacement.md)、[当前模型边界](docs/current-model-boundaries.md)、[内部模型接口](docs/internal-model-interface.md)、[数据字典](docs/data-dictionary.md)、[故障排查](docs/troubleshooting.md)和[验收报告](docs/acceptance-report.md)。
 
 ## 当前模型边界
 
