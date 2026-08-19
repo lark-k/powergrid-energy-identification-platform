@@ -237,6 +237,18 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TrainingRun' }
+  /stations/{stationId}/training-runs:
+    get:
+      operationId: listStationTrainingRuns
+      parameters: [{ $ref: '#/components/parameters/StationId' }]
+      responses:
+        '200':
+          description: 该台区可追溯的真实训练运行归档
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TrainingRun' }
   /imports:
     post:
       operationId: createImport
@@ -653,18 +665,24 @@ components:
         events: { type: array, items: { type: object } }
     TrainingRun:
       type: object
-      required: [source, run_id, station_id, status, model_version, dataset_window_days, sample_count, started_at, completed_at, validation_score, steps, epochs, release_checks]
+      required: [source, run_id, station_id, status, model_version, model_task, dataset_window_days, window_size_minutes, sample_count, started_at, completed_at, validation_score, metric_name, metric_value, validation_series_name, steps, epochs, release_checks]
       properties:
         source: { type: string, enum: [rest-api] }
         run_id: { type: string }
         station_id: { type: string }
         status: { type: string, enum: [queued, running, completed, failed] }
         model_version: { type: string }
+        model_task: { type: string, enum: [resource_identification, pv_separation] }
         dataset_window_days: { type: integer, minimum: 0 }
+        window_size_minutes: { type: integer, minimum: 1 }
         sample_count: { type: integer, minimum: 0 }
         started_at: { type: string, format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         validation_score: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        metric_name: { type: string }
+        metric_value: { type: [number, 'null'] }
+        validation_series_name: { type: string }
+        source_record: { type: [string, 'null'], description: 真实训练归档的原始 JSON 元数据 }
         steps: { type: array, items: { type: object } }
         epochs:
           type: array

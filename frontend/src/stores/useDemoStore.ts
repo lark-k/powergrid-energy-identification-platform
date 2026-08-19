@@ -13,7 +13,7 @@ interface DemoState {
   settingsOpen: boolean; guideOpen: boolean; busy: boolean; historyAdvancing: boolean; toast: string | null; settings: SettingsState;
   load: () => Promise<void>; advance: () => Promise<void>; connect: () => () => void;
   setStation: (stationId: string) => Promise<void>; setRange: (range: TimeRange) => Promise<void>;
-  setHistoryAt: (at: string) => Promise<void>; goLive: () => Promise<void>;
+  setHistoryAt: (at: string, startAt?: string) => Promise<void>; goLive: () => Promise<void>;
   selectResult: (result: SeparationResult) => void; setDrawer: (open: boolean, tab?: DemoState["drawerTab"]) => void;
   setSettingsOpen: (open: boolean) => void; setGuideOpen: (open: boolean) => void;
   updateSettings: (settings: Partial<SettingsState>) => void; importFile: (file: File) => Promise<void>;
@@ -171,14 +171,21 @@ export const useDemoStore = create<DemoState>((set, get) => ({
       }
     } catch (error) { set({ error: asApiError(error), connection: "offline", busy: false }); }
   },
-  setHistoryAt: async (at) => {
+  setHistoryAt: async (at, startAt) => {
     const parsed = new Date(at);
     if (Number.isNaN(parsed.getTime())) return;
     const replay = historyReplayBounds(parsed, get().range, get().dataRange);
-    set({ viewMode: "history", historyAt: replay.end.toISOString(), historyStartAt: replay.start.toISOString(), historyCursor: replay.cursor.toISOString(), busy: true, historyAdvancing: false });
+    const requestedStart = startAt ? new Date(startAt) : replay.start;
+    const firstEventMs = get().dataRange?.first_event_time ? new Date(get().dataRange!.first_event_time!).getTime() : replay.start.getTime();
+    const startMs = Number.isNaN(requestedStart.getTime())
+      ? replay.start.getTime()
+      : Math.min(Math.max(requestedStart.getTime(), firstEventMs), replay.end.getTime() - minuteMs);
+    const start = new Date(startMs);
+    const cursor = new Date(Math.min(replay.end.getTime(), startMs + minuteMs));
+    set({ viewMode: "history", historyAt: replay.end.toISOString(), historyStartAt: start.toISOString(), historyCursor: cursor.toISOString(), busy: true, historyAdvancing: false });
     try {
-      const snapshot = await stationAdapter.getSnapshot(get().stationId, replay.cursor, get().range);
-      set({ ...historySnapshotState(snapshot, replay.start), busy: false });
+      const snapshot = await stationAdapter.getSnapshot(get().stationId, cursor, get().range);
+      set({ ...historySnapshotState(snapshot, start), busy: false });
     } catch (error) { set({ error: asApiError(error), connection: "offline", busy: false }); }
   },
   goLive: async () => {

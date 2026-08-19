@@ -10,6 +10,24 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml ps
 
 前端地址为 `http://localhost:5173`。前端容器只代理 `/api` 到 Java；Python 与 PostgreSQL 位于独立内部网络，浏览器不可直接访问。
 
+### 更新代码后安全重建
+
+代码或前端资源更新后，可直接重建并替换容器；该操作保留 PostgreSQL named volume，不需要先执行 `down`：
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml ps
+```
+
+如果 5173 已被其他程序占用，可仅为本次命令指定其他前端端口，例如 5180：
+
+```powershell
+$env:FRONTEND_PORT = '5180'
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+```
+
+此时访问 `http://localhost:5180`。不要执行 `docker compose down -v`，否则会删除数据库卷。
+
 发送总开分钟数据：
 
 ```powershell

@@ -5,7 +5,8 @@ export const SYSTEM_CONFIG = {
   stationName: "海滨路台区",
   demoStart: new Date().toISOString(),
   demoTickMs: 1000,
-  sourceMode: (import.meta.env.VITE_DATA_SOURCE === "api" ? "api" : "mock") as "api" | "mock",
+  // Production-safe default: Mock data is available only when explicitly requested.
+  sourceMode: (import.meta.env.VITE_DATA_SOURCE === "mock" ? "mock" : "api") as "api" | "mock",
   apiBaseUrl: String(import.meta.env.VITE_API_BASE_URL ?? ""),
   minuteInterval: 1,
   feedbackPeriodMinutes: 15,

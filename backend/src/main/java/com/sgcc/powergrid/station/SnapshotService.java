@@ -234,7 +234,7 @@ public class SnapshotService {
                         select run_id, station_id, status, model_version, model_task,
                                dataset_window_days, window_size_minutes, sample_count,
                                started_at, completed_at, validation_score,
-                               metric_name, metric_value, validation_series_name
+                               metric_name, metric_value, validation_series_name, source_record
                         from training_run where station_id = :stationId or station_id is null
                         order by started_at desc
                         """)

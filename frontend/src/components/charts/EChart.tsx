@@ -12,11 +12,14 @@ interface EChartProps {
   className?: string;
   onClick?: (params: unknown) => void;
   preserveTooltipOnUpdate?: boolean;
+  preserveDataZoomOnUpdate?: boolean;
+  onDataZoomChange?: () => void;
   ariaLabel: string;
 }
 
 type AxisPointerEvent = { axesInfo?: Array<{ axisDim?: string; value?: number | string }> };
 type SeriesHoverEvent = { value?: unknown };
+type DataZoomState = { start?: number; end?: number; startValue?: number | string; endValue?: number | string };
 
 const timestampFromValue = (value: unknown) => Array.isArray(value) ? Number(value[0]) : Number.NaN;
 
@@ -30,12 +33,14 @@ const findTimestamp = (option: EChartsOption, timestamp: number) => {
   return null;
 };
 
-export function EChart({ option, className, onClick, preserveTooltipOnUpdate = false, ariaLabel }: EChartProps) {
+export function EChart({ option, className, onClick, preserveTooltipOnUpdate = false, preserveDataZoomOnUpdate = false, onDataZoomChange, ariaLabel }: EChartProps) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<EChartsType | null>(null);
   const pointerInsideRef = useRef(false);
   const hoveredTimestampRef = useRef<number | null>(null);
   const restoreFrameRef = useRef<number | null>(null);
+  const zoomRestoreFrameRef = useRef<number | null>(null);
+  const dataZoomStateRef = useRef<DataZoomState | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -52,22 +57,43 @@ export function EChart({ option, className, onClick, preserveTooltipOnUpdate = f
       const timestamp = timestampFromValue(event.value);
       if (Number.isFinite(timestamp)) hoveredTimestampRef.current = timestamp;
     };
+    const rememberDataZoom = () => {
+      if (!preserveDataZoomOnUpdate) return;
+      const current = chart.getOption().dataZoom;
+      const first = (Array.isArray(current) ? current[0] : current) as DataZoomState | undefined;
+      if (first) dataZoomStateRef.current = { start: first.start, end: first.end, startValue: first.startValue, endValue: first.endValue };
+      onDataZoomChange?.();
+    };
     chart.on("updateAxisPointer", rememberAxisPointer);
     chart.on("mouseover", rememberSeriesPoint);
+    chart.on("datazoom", rememberDataZoom);
     const resize = new ResizeObserver(() => { if (!chart.isDisposed()) chart.resize(); });
     resize.observe(ref.current);
     return () => {
       resize.disconnect();
       if (restoreFrameRef.current != null) window.cancelAnimationFrame(restoreFrameRef.current);
-      if (!chart.isDisposed()) { chart.off("click"); chart.off("updateAxisPointer", rememberAxisPointer); chart.off("mouseover", rememberSeriesPoint); chart.dispose(); }
+      if (zoomRestoreFrameRef.current != null) window.cancelAnimationFrame(zoomRestoreFrameRef.current);
+      if (!chart.isDisposed()) { chart.off("click"); chart.off("updateAxisPointer", rememberAxisPointer); chart.off("mouseover", rememberSeriesPoint); chart.off("datazoom", rememberDataZoom); chart.dispose(); }
       chartRef.current = null;
     };
-  }, []);
+  }, [onDataZoomChange, preserveDataZoomOnUpdate]);
 
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || chart.isDisposed()) return;
+    const savedZoom = dataZoomStateRef.current;
     chart.setOption(option, { notMerge: true, lazyUpdate: true });
+    if (preserveDataZoomOnUpdate && savedZoom) {
+      if (zoomRestoreFrameRef.current != null) window.cancelAnimationFrame(zoomRestoreFrameRef.current);
+      zoomRestoreFrameRef.current = window.requestAnimationFrame(() => {
+        zoomRestoreFrameRef.current = null;
+        if (chart.isDisposed()) return;
+        const range = savedZoom.startValue != null && savedZoom.endValue != null
+          ? { startValue: savedZoom.startValue, endValue: savedZoom.endValue }
+          : { start: savedZoom.start, end: savedZoom.end };
+        chart.dispatchAction({ type: "dataZoom", dataZoomIndex: 0, ...range });
+      });
+    }
     if (!preserveTooltipOnUpdate || !pointerInsideRef.current || hoveredTimestampRef.current == null) return;
     const target = findTimestamp(option, hoveredTimestampRef.current);
     if (!target) return;
@@ -76,7 +102,7 @@ export function EChart({ option, className, onClick, preserveTooltipOnUpdate = f
       restoreFrameRef.current = null;
       if (!chart.isDisposed() && pointerInsideRef.current) chart.dispatchAction({ type: "showTip", ...target });
     });
-  }, [option, preserveTooltipOnUpdate]);
+  }, [option, preserveDataZoomOnUpdate, preserveTooltipOnUpdate]);
   useEffect(() => {
     const chart = chartRef.current; if (!chart || !onClick) return;
     chart.on("click", onClick);

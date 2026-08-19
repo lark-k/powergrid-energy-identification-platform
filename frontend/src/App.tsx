@@ -1,2 +1,3 @@
-import { CommandCenter } from "./features/command-center/CommandCenter";
-export function App() { return <CommandCenter />; }
+import { ExecutiveCommandCenter } from "./features/executive/ExecutiveCommandCenter";
+
+export function App() { return <ExecutiveCommandCenter />; }

@@ -7,11 +7,16 @@ export interface MainSwitchMinutePoint {
   station_id: string;
   event_time: string;
   active_power_kw: number;
+  phase_a_power_kw?: number;
+  phase_b_power_kw?: number;
+  phase_c_power_kw?: number;
   reactive_power_kvar: number;
   voltage: number;
   current: number;
   pf: number;
+  coverage_ratio?: number;
   quality_flag: QualityFlag;
+  source_id?: string;
 }
 
 export interface PVSubstationPoint {
@@ -53,6 +58,7 @@ export interface RecognitionResult {
   window_start: string;
   window_end: string;
   model_version: string;
+  quality_status?: string;
   items: RecognitionItem[];
 }
 
@@ -74,6 +80,7 @@ export interface SeparationResult {
   model_window_start: string;
   model_window_end: string;
   remaining_load_kw: number;
+  quality_status?: string;
 }
 
 export interface CorrectionRecord {
@@ -209,6 +216,7 @@ export interface TrainingProcessRun {
   metric_name: "macro_f1" | "activity_f1" | string;
   metric_value: number | null;
   validation_series_name: string;
+  source_record?: string;
   steps: Array<{
     step_id: string;
     name: string;
