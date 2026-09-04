@@ -1,9 +1,11 @@
 package com.sgcc.powergrid.measurement;
 
+import com.sgcc.powergrid.common.JdbcValues;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -139,6 +141,39 @@ public class MeasurementRepository {
                 .query().listOfRows();
     }
 
+    public Optional<MainSwitchMinutePoint> latestBefore(String stationId, OffsetDateTime eventTime) {
+        List<Map<String, Object>> rows = jdbc.sql("""
+                        select station_id, event_time, active_power_kw,
+                               phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
+                               reactive_power_kvar, voltage, current_ampere, power_factor,
+                               coverage_ratio, quality_flag, source_id
+                        from main_switch_minute
+                        where station_id = :stationId and event_time < :eventTime
+                        order by event_time desc limit 1
+                        """)
+                .param("stationId", stationId)
+                .param("eventTime", eventTime)
+                .query().listOfRows();
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
+        Map<String, Object> row = rows.getFirst();
+        return Optional.of(new MainSwitchMinutePoint(
+                String.valueOf(row.get("station_id")),
+                JdbcValues.offsetDateTime(row.get("event_time")),
+                number(row, "active_power_kw"),
+                number(row, "phase_a_power_kw"),
+                number(row, "phase_b_power_kw"),
+                number(row, "phase_c_power_kw"),
+                nullableNumber(row, "reactive_power_kvar"),
+                nullableNumber(row, "voltage"),
+                nullableNumber(row, "current_ampere"),
+                nullableNumber(row, "power_factor"),
+                number(row, "coverage_ratio"),
+                String.valueOf(row.get("quality_flag")),
+                String.valueOf(row.get("source_id"))));
+    }
+
     public void incrementQuality(String stationId, int duplicates, int outOfOrder, int warnings) {
         jdbc.sql("""
                         update data_quality_summary set
@@ -154,5 +189,14 @@ public class MeasurementRepository {
                 .param("now", OffsetDateTime.now())
                 .param("stationId", stationId)
                 .update();
+    }
+
+    private static double number(Map<String, Object> row, String key) {
+        return ((Number) row.get(key)).doubleValue();
+    }
+
+    private static Double nullableNumber(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        return value == null ? null : ((Number) value).doubleValue();
     }
 }

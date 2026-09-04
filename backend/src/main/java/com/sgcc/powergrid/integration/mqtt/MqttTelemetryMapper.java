@@ -67,16 +67,18 @@ public class MqttTelemetryMapper {
             }
         }
         List<Item> required = REQUIRED_POWER_NAMES.stream().map(name -> required(items, name)).toList();
-        OffsetDateTime dataMinute = minute(parseTimestamp(required.getFirst().timestamp()));
+        OffsetDateTime frameTime = parseTimestamp(notification.timestamp());
+        OffsetDateTime dataTime = parseTimestamp(required.getFirst().timestamp());
+        OffsetDateTime dataMinute = nearestMinute(dataTime);
         for (Item item : required) {
-            if (!dataMinute.isEqual(minute(parseTimestamp(item.timestamp())))) {
+            if (!dataMinute.isEqual(nearestMinute(parseTimestamp(item.timestamp())))) {
                 throw new IllegalArgumentException("Required MQTT power fields span multiple minutes");
             }
         }
-        // The terminal publishes exactly one minute frame per notification. Individual measurement
-        // timestamps can lag the frame or jump across the minute boundary, so they are unsuitable
-        // as the database minute key and previously caused deterministic gaps and duplicates.
-        OffsetDateTime eventTime = minute(parseTimestamp(notification.timestamp()));
+        // The protocol defines the frame timestamp as the send time and the item timestamp as the
+        // measurement time. Samples can arrive shortly before or after a minute boundary, so map
+        // the measurement time to the nearest minute instead of flooring it or using the send time.
+        OffsetDateTime eventTime = dataMinute;
         String qualityFlag = required.stream().allMatch(item -> "0".equals(item.quality()))
                 ? "good" : "warning";
         MainSwitchMinutePoint point = new MainSwitchMinutePoint(
@@ -93,7 +95,8 @@ public class MqttTelemetryMapper {
                 1.0,
                 qualityFlag,
                 "mqtt:" + deviceId);
-        return Optional.of(new MappedMinute(deviceId, requestId(notification, payload), point));
+        return Optional.of(new MappedMinute(
+                deviceId, requestId(notification, payload), frameTime, dataTime, point));
     }
 
     private String deviceId(String topic) {
@@ -147,6 +150,10 @@ public class MqttTelemetryMapper {
         return value.withSecond(0).withNano(0);
     }
 
+    private static OffsetDateTime nearestMinute(OffsetDateTime value) {
+        return minute(value.plusSeconds(30));
+    }
+
     private static String requestId(Notification notification, byte[] payload) {
         if (notification.token() != null && !notification.token().isBlank()) {
             String candidate = "mqtt-" + notification.token().trim();
@@ -158,7 +165,12 @@ public class MqttTelemetryMapper {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
-    public record MappedMinute(String deviceId, String requestId, MainSwitchMinutePoint point) {}
+    public record MappedMinute(
+            String deviceId,
+            String requestId,
+            OffsetDateTime frameTime,
+            OffsetDateTime dataTime,
+            MainSwitchMinutePoint point) {}
 
     public record Notification(String token, String timestamp, String datatype, List<Item> body) {}
 

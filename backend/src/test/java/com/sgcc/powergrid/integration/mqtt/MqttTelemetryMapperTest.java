@@ -96,6 +96,22 @@ class MqttTelemetryMapperTest {
                 .isEqualTo(OffsetDateTime.parse("2026-09-04T18:06:00+08:00"));
     }
 
+    @Test
+    void assignsDelayedFrameToNearestMeasurementMinute() throws Exception {
+        var mapped = mapper.map(TOPIC, payloadAt(
+                "20260904195019071",
+                "2026-09-04T19:50:19.071+0800",
+                "2026-09-04T19:49:21.055+0800"));
+
+        var value = mapped.orElseThrow();
+        assertThat(value.point().eventTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T19:49:00+08:00"));
+        assertThat(value.dataTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T19:49:21.055+08:00"));
+        assertThat(value.frameTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T19:50:19.071+08:00"));
+    }
+
     private static byte[] payload(String datatype, String requiredQuality, boolean includePhaseC) {
         return payload(
                 datatype,
