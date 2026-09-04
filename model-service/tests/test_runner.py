@@ -61,6 +61,32 @@ def test_real_sample_runs_both_current_sgcc_models(
     assert result.pv_activity_probability is not None
 
 
+def test_mqtt_protocol_negative_power_window_runs_both_models(
+    coordinator: InferenceCoordinator,
+    sample_points: list[MinutePoint],
+) -> None:
+    points = [
+        point.model_copy(
+            update={
+                "active_power_kw": -0.789214,
+                "phase_a_power_kw": -0.235295,
+                "phase_b_power_kw": -0.281486,
+                "phase_c_power_kw": -0.272433,
+                "source_id": "mqtt:202606050023",
+            }
+        )
+        for point in sample_points[-240:]
+    ]
+
+    result = coordinator.infer(request(points))
+
+    assert result.quality_status in {QualityStatus.GOOD, QualityStatus.WARNING}
+    assert result.recognition_model_version is not None
+    assert result.separation_model_version is not None
+    assert result.pv.score is not None
+    assert result.pv_generation_kw is not None and result.pv_generation_kw >= 0
+
+
 def test_120_minutes_warms_recognition_but_not_pv_separation(
     coordinator: InferenceCoordinator,
     sample_points: list[MinutePoint],

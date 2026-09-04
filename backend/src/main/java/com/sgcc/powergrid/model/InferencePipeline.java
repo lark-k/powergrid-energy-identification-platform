@@ -8,6 +8,7 @@ import com.sgcc.powergrid.integration.modelservice.ModelServiceDtos;
 import com.sgcc.powergrid.measurement.IngestionModels.MinutesIngestedEvent;
 import com.sgcc.powergrid.measurement.MeasurementRepository;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,7 +61,7 @@ public class InferencePipeline {
             List<Map<String, Object>> rows = measurements.history(stationId, targetTime, 240);
             List<ModelServiceDtos.MinutePoint> points = rows.stream().map(row -> new ModelServiceDtos.MinutePoint(
                     String.valueOf(row.get("station_id")),
-                    JdbcValues.offsetDateTime(row.get("event_time")),
+                    modelTime(JdbcValues.offsetDateTime(row.get("event_time"))),
                     number(row, "active_power_kw"),
                     number(row, "phase_a_power_kw"),
                     number(row, "phase_b_power_kw"),
@@ -69,7 +70,7 @@ public class InferencePipeline {
                     String.valueOf(row.get("quality_flag")),
                     String.valueOf(row.get("source_id")))).toList();
             ModelServiceDtos.InferenceRequest inferenceRequest =
-                    new ModelServiceDtos.InferenceRequest(requestId, stationId, targetTime, points);
+                    new ModelServiceDtos.InferenceRequest(requestId, stationId, modelTime(targetTime), points);
             ModelServiceDtos.InferenceResult result = modelService.infer(inferenceRequest);
             resultPersistence.save(stationId, targetTime, requestId, rows, result);
             modelService.inferCandidate(inferenceRequest)
@@ -82,6 +83,10 @@ public class InferencePipeline {
             recordFailure(stationId, targetTime, requestId, exception);
             LOGGER.warn("Model inference degraded for station={} target={}", stationId, targetTime);
         }
+    }
+
+    static OffsetDateTime modelTime(OffsetDateTime value) {
+        return value.withOffsetSameInstant(ZoneOffset.UTC);
     }
 
     private void saveShadowComparisons(String stationId, OffsetDateTime targetTime, String requestId,

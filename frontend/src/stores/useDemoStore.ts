@@ -74,7 +74,7 @@ const latestHistoryEnd = (dataRange: StationDataRange | null) => dataRange?.last
 
 export const useDemoStore = create<DemoState>((set, get) => ({
   now: new Date(SYSTEM_CONFIG.demoStart), snapshot: null, stations: [], stationId: SYSTEM_CONFIG.stationId,
-  viewMode: SYSTEM_CONFIG.sourceMode === "api" ? "history" : "live", historyAt: null, historyStartAt: null, historyCursor: null, dataRange: null,
+  viewMode: "live", historyAt: null, historyStartAt: null, historyCursor: null, dataRange: null,
   range: "6h", selected: null, connection: "connecting", error: null,
   drawerOpen: false, drawerTab: "minutes", settingsOpen: false, guideOpen: false, busy: false, historyAdvancing: false, toast: null,
   settings: { existsThreshold: SYSTEM_CONFIG.thresholds.exists, suspectedThreshold: SYSTEM_CONFIG.thresholds.suspected, reducedEffects: false },
@@ -122,13 +122,29 @@ export const useDemoStore = create<DemoState>((set, get) => ({
       return;
     }
     const localNow = new Date();
-    if (SYSTEM_CONFIG.sourceMode === "api") { set({ now: localNow }); return; }
-    const previous = get().now;
+    const previous = state.now;
     const sameMinute = previous.getFullYear() === localNow.getFullYear()
       && previous.getMonth() === localNow.getMonth()
       && previous.getDate() === localNow.getDate()
       && previous.getHours() === localNow.getHours()
       && previous.getMinutes() === localNow.getMinutes();
+    if (SYSTEM_CONFIG.sourceMode === "api") {
+      set({ now: localNow });
+      if (sameMinute) return;
+      const stationId = state.stationId;
+      try {
+        const [snapshot, dataRange] = await Promise.all([
+          stationAdapter.getSnapshot(stationId, localNow, state.range),
+          stationAdapter.getDataRange(stationId),
+        ]);
+        const current = get();
+        if (current.viewMode !== "live" || current.stationId !== stationId) return;
+        set({ dataRange, ...applySnapshot(snapshot) });
+      } catch (error) {
+        set({ error: asApiError(error), connection: "degraded" });
+      }
+      return;
+    }
     if (sameMinute) { set({ now: localNow }); return; }
     try {
       const snapshot = await stationAdapter.getSnapshot(get().stationId, localNow, get().range);
@@ -137,7 +153,16 @@ export const useDemoStore = create<DemoState>((set, get) => ({
   },
   connect: () => stationAdapter.connectStream(
     get().stationId,
-    (snapshot) => set(applySnapshot(snapshot)),
+    (snapshot) => {
+      const stationId = get().stationId;
+      set(applySnapshot(snapshot));
+      if (SYSTEM_CONFIG.sourceMode === "api") {
+        void stationAdapter.getDataRange(stationId).then((dataRange) => {
+          const current = get();
+          if (current.viewMode === "live" && current.stationId === stationId) set({ dataRange });
+        }).catch(() => undefined);
+      }
+    },
     (connection) => set({ connection }),
     () => ({
       at: get().viewMode === "history" && get().historyAt ? new Date(get().historyAt!) : new Date(),
@@ -192,8 +217,12 @@ export const useDemoStore = create<DemoState>((set, get) => ({
     const at = new Date();
     set({ viewMode: "live", historyAt: null, historyStartAt: null, historyCursor: null, historyAdvancing: false, busy: true });
     try {
-      const snapshot = await stationAdapter.getSnapshot(get().stationId, at, get().range);
-      set({ ...applySnapshot(snapshot), busy: false });
+      const stationId = get().stationId;
+      const [snapshot, dataRange] = await Promise.all([
+        stationAdapter.getSnapshot(stationId, at, get().range),
+        stationAdapter.getDataRange(stationId),
+      ]);
+      set({ dataRange, ...applySnapshot(snapshot), busy: false });
     } catch (error) { set({ error: asApiError(error), connection: "offline", busy: false }); }
   },
   selectResult: (selected) => set({ selected }),

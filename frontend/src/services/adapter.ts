@@ -23,10 +23,15 @@ export class MockStationAdapter implements StationDataAdapter {
   }
   async getDataRange() {
     const last = new Date();
+    const availableDates = Array.from({ length: 8 }, (_, index) => {
+      const date = new Date(last.getTime() - (7 - index) * 24 * 60 * 60_000);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    });
     return {
       first_event_time: new Date(last.getTime() - 7 * 24 * 60 * 60_000).toISOString(),
       last_event_time: last.toISOString(), minute_count: 7 * 1440,
       recognition_result_count: 7 * 1440 - 119, separation_result_count: 7 * 1440 - 239,
+      available_dates: availableDates,
     };
   }
   async getSnapshot(_stationId: string, at: Date) { return snapshotAt(at); }
@@ -35,9 +40,9 @@ export class MockStationAdapter implements StationDataAdapter {
     return { import_id: `IMP-${Date.now()}`, rows: Math.max(1, Math.round(file.size / 80)) };
   }
   async exportResults(snapshot: StationSnapshot) {
-    const header = ["event_time", "total_power_kw", "initial_pv_kw", "corrected_pv_kw", "result_status", "feedback_status", "confidence", "model_version", "batch_id"];
+    const header = ["event_time", "total_power_kw", "initial_pv_kw", "pv_activity_probability", "interpolated_minutes", "corrected_pv_kw", "result_status", "feedback_status", "confidence", "quality_status", "model_version", "batch_id"];
     const rows = snapshot.separation_results.map((row) =>
-      [row.event_time, row.total_power_kw, row.initial_pv_kw, row.corrected_pv_kw ?? "", row.result_status, row.feedback_status, row.confidence, row.model_version, row.batch_id ?? ""].join(","),
+      [row.event_time, row.total_power_kw, row.initial_pv_kw, row.pv_activity_probability ?? "", row.interpolated_minutes, row.corrected_pv_kw ?? "", row.result_status, row.feedback_status, row.confidence, row.quality_status ?? "", row.model_version, row.batch_id ?? ""].join(","),
     );
     return new Blob([`\uFEFF${header.join(",")}\n${rows.join("\n")}`], { type: "text/csv;charset=utf-8" });
   }

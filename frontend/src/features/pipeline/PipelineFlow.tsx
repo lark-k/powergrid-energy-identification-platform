@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import type { StationSnapshot } from "../../types/domain";
 import { percentText, powerText } from "../../utils/format";
+import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../../utils/separation";
 import { ProcessVisualization, type VisualizedStage } from "./ProcessVisualization";
 
 type StageId = "collection" | "training" | "inference" | "result";
@@ -79,8 +80,10 @@ export function PipelineFlow({ snapshot }: { snapshot: StationSnapshot }) {
         tone: "amber",
         icon: ChartLineUp,
         metric: latest ? `光伏 ${powerText(latest.initial_pv_kw)} kW` : "暂无分离结果",
-        meta: latest ? `置信度 ${percentText(latest.confidence)}` : "240 分钟窗口预热中",
-        detail: `当前展示 ${snapshot.separation_results.length.toLocaleString()} 条分钟结果，最近校正覆盖 ${percentText(snapshot.quality.completeness_ratio)}`,
+        meta: latest ? `${separationConfidenceLabel(latest)} ${percentText(separationConfidenceValue(latest))}` : "240 分钟窗口预热中",
+        detail: latest
+          ? `当前展示 ${snapshot.separation_results.length.toLocaleString()} 条分钟结果 · ${separationQualityText(latest)}`
+          : "等待形成 240 分钟模型窗口",
       },
     ];
   }, [snapshot]);

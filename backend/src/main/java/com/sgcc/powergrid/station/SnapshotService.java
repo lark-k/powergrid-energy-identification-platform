@@ -154,7 +154,7 @@ public class SnapshotService {
     }
 
     public Map<String, Object> dataRange(String stationId) {
-        station(stationId);
+        Map<String, Object> station = station(stationId);
         Map<String, Object> minuteRange = jdbc.sql("""
                         select min(event_time) as first_event_time,
                                max(event_time) as last_event_time,
@@ -172,6 +172,15 @@ public class SnapshotService {
         Map<String, Object> output = new LinkedHashMap<>(minuteRange);
         output.put("recognition_result_count", recognitionCount);
         output.put("separation_result_count", separationCount);
+        output.put("available_dates", jdbc.sql("""
+                        select distinct cast(event_time at time zone :timezone as date) as available_date
+                        from main_switch_minute
+                        where station_id = :stationId
+                        order by available_date
+                        """)
+                .param("timezone", String.valueOf(station.get("timezone")))
+                .param("stationId", stationId)
+                .query(java.time.LocalDate.class).list().stream().map(Object::toString).toList());
         return output;
     }
 
@@ -310,7 +319,8 @@ public class SnapshotService {
                           case when r.corrected_pv_kw is not null and b.arrival_time <= :visibleAt then '已反馈校正'
                                when r.event_time >= :realtimeBoundary then '实时初始'
                                else '等待反馈' end as result_status,
-                          r.total_power_kw, r.initial_pv_kw,
+                          r.total_power_kw, r.initial_pv_kw, r.pv_activity_probability,
+                          r.interpolated_minutes,
                           case when b.arrival_time <= :visibleAt then r.corrected_pv_kw else null end as corrected_pv_kw,
                           case when b.arrival_time <= :visibleAt then r.station_feedback_value else null end as station_feedback_value,
                           case when r.corrected_pv_kw is not null and b.arrival_time <= :visibleAt then '已反馈' else '等待回传' end as feedback_status,
@@ -322,7 +332,7 @@ public class SnapshotService {
                           case when b.arrival_time <= :visibleAt then r.batch_id else null end as batch_id,
                           r.input_window_start as model_window_start,
                           r.input_window_end as model_window_end,
-                          r.total_power_kw - coalesce(
+                          r.total_power_kw + coalesce(
                             case when b.arrival_time <= :visibleAt then r.corrected_pv_kw else null end,
                             r.initial_pv_kw) as remaining_load_kw,
                           r.quality_status

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClockCounterClockwise, Database, Info, LockOpen, Rows } from "@phosphor-icons/react";
 import type { SeparationResult, StationSnapshot } from "../../types/domain";
 import { dateTimeText, percentText, powerText, timeText } from "../../utils/format";
+import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../../utils/separation";
 import type { HistorySelection } from "./HistoryWindow";
 
 interface MinuteLedgerProps {
@@ -21,7 +22,7 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
     .slice(-18)
     .reverse(), [selection.end, selection.start, snapshot.separation_results]);
 
-  useEffect(() => { setPinned(null); }, [selection.end, selection.start, snapshot.station_id]);
+  useEffect(() => { setPinned(null); }, [snapshot.station_id]);
 
   const detail = pinned
     ? snapshot.separation_results.find((row) => row.event_time === pinned.event_time) ?? pinned
@@ -33,12 +34,12 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
     ["矫正后光伏", detail.corrected_pv_kw == null ? "等待反馈" : `${powerText(detail.corrected_pv_kw)} kW`],
     ["分站反馈", detail.station_feedback_value == null ? "尚未到达" : `${powerText(detail.station_feedback_value)} kW`],
     ["A / B / C 三相", minute?.phase_a_power_kw == null ? "后台未返回" : `${powerText(minute.phase_a_power_kw)} / ${powerText(minute.phase_b_power_kw)} / ${powerText(minute.phase_c_power_kw)} kW`],
-    ["辨识置信度", percentText(detail.confidence)],
+    [separationConfidenceLabel(detail), percentText(separationConfidenceValue(detail))],
     ["反馈批次", detail.batch_id ?? "等待回传"],
     ["结果状态", detail.result_status],
     ["模型版本", detail.model_version],
     ["模型输入窗口", `${timeText(detail.model_window_start)} – ${timeText(detail.model_window_end)}`],
-    ["数据质量", detail.quality_status ?? minute?.quality_flag ?? "后台未返回"],
+    ["输入数据质量", separationQualityText(detail)],
   ] : [];
 
   return <section className="minute-ledger" aria-label="时刻详细数据列表">
@@ -62,7 +63,10 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
             <span>{powerText(row.initial_pv_kw)} kW</span>
             <span>{row.corrected_pv_kw == null ? "—" : `${powerText(row.corrected_pv_kw)} kW`}</span>
             <span>{row.station_feedback_value == null ? "等待" : `${powerText(row.station_feedback_value)} kW`}</span>
-            <span className={`status ${row.feedback_status === "已反馈" ? "good" : "waiting"}`}>{row.result_status}</span>
+            <span
+              className={`status ${row.quality_status !== "good" ? "warning" : row.feedback_status === "已反馈" ? "good" : "waiting"}`}
+              title={separationQualityText(row)}
+            >{row.result_status}{row.quality_status !== "good" ? " · 告警" : ""}</span>
             <span title={row.model_version}>{row.model_version}</span>
           </button>) : <div className="ledger-empty">该时间段暂无真实分离记录</div>}
         </div>

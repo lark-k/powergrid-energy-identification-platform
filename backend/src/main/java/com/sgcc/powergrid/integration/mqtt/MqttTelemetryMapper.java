@@ -1,0 +1,166 @@
+package com.sgcc.powergrid.integration.mqtt;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sgcc.powergrid.measurement.MainSwitchMinutePoint;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConditionalOnProperty(prefix = "platform.mqtt", name = "enabled", havingValue = "true")
+public class MqttTelemetryMapper {
+    private static final List<String> REQUIRED_POWER_NAMES =
+            List.of("TotW_MA", "PhW_phsA_MA", "PhW_phsB_MA", "PhW_phsC_MA");
+    private static final DateTimeFormatter COMPACT_OFFSET_TIME = new DateTimeFormatterBuilder()
+            .appendPattern("uuuu-MM-dd'T'HH:mm:ss")
+            .optionalStart()
+            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+            .optionalEnd()
+            .appendOffset("+HHmm", "Z")
+            .toFormatter(Locale.ROOT);
+
+    private final ObjectMapper objectMapper;
+    private final MqttTelemetryProperties properties;
+    private final Map<String, String> stationByDevice;
+
+    public MqttTelemetryMapper(ObjectMapper objectMapper, MqttTelemetryProperties properties) {
+        this.objectMapper = objectMapper;
+        this.properties = properties;
+        this.stationByDevice = properties.stationByDevice();
+    }
+
+    public Optional<MappedMinute> map(String topic, byte[] payload) throws IOException {
+        if (payload.length > properties.maxPayloadBytes()) {
+            throw new IllegalArgumentException("MQTT payload exceeds configured size limit");
+        }
+        Notification notification = objectMapper.readValue(payload, Notification.class);
+        if (!"0".equals(notification.datatype())) {
+            return Optional.empty();
+        }
+        String deviceId = deviceId(topic);
+        String stationId = stationByDevice.get(deviceId);
+        if (stationId == null) {
+            throw new IllegalArgumentException("No station mapping for MQTT device " + deviceId);
+        }
+        if (notification.body() == null || notification.body().isEmpty()) {
+            throw new IllegalArgumentException("MQTT telemetry body is empty");
+        }
+        if (notification.timestamp() == null || notification.timestamp().isBlank()) {
+            throw new IllegalArgumentException("MQTT frame timestamp is missing");
+        }
+
+        Map<String, Item> items = new LinkedHashMap<>();
+        for (Item item : notification.body()) {
+            if (item != null && item.name() != null) {
+                items.put(item.name(), item);
+            }
+        }
+        List<Item> required = REQUIRED_POWER_NAMES.stream().map(name -> required(items, name)).toList();
+        OffsetDateTime dataMinute = minute(parseTimestamp(required.getFirst().timestamp()));
+        for (Item item : required) {
+            if (!dataMinute.isEqual(minute(parseTimestamp(item.timestamp())))) {
+                throw new IllegalArgumentException("Required MQTT power fields span multiple minutes");
+            }
+        }
+        // The terminal publishes exactly one minute frame per notification. Individual measurement
+        // timestamps can lag the frame or jump across the minute boundary, so they are unsuitable
+        // as the database minute key and previously caused deterministic gaps and duplicates.
+        OffsetDateTime eventTime = minute(parseTimestamp(notification.timestamp()));
+        String qualityFlag = required.stream().allMatch(item -> "0".equals(item.quality()))
+                ? "good" : "warning";
+        MainSwitchMinutePoint point = new MainSwitchMinutePoint(
+                stationId,
+                eventTime,
+                value(required.get(0)),
+                value(required.get(1)),
+                value(required.get(2)),
+                value(required.get(3)),
+                optionalValue(items.get("TotVar_MA")),
+                null,
+                null,
+                optionalValue(items.get("TotPF_AA")),
+                1.0,
+                qualityFlag,
+                "mqtt:" + deviceId);
+        return Optional.of(new MappedMinute(deviceId, requestId(notification, payload), point));
+    }
+
+    private String deviceId(String topic) {
+        if (topic == null || topic.isBlank()) {
+            throw new IllegalArgumentException("MQTT topic is empty");
+        }
+        int separator = topic.lastIndexOf('/');
+        if (separator < 0 || separator == topic.length() - 1) {
+            throw new IllegalArgumentException("MQTT topic does not contain a device identifier");
+        }
+        return topic.substring(separator + 1);
+    }
+
+    private static Item required(Map<String, Item> items, String name) {
+        Item item = items.get(name);
+        if (item == null || item.val() == null || item.timestamp() == null) {
+            throw new IllegalArgumentException("MQTT telemetry is missing required field " + name);
+        }
+        return item;
+    }
+
+    private static double value(Item item) {
+        try {
+            double value = Double.parseDouble(item.val());
+            if (!Double.isFinite(value)) {
+                throw new NumberFormatException("non-finite value");
+            }
+            return value;
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Invalid numeric MQTT value for " + item.name(), exception);
+        }
+    }
+
+    private static Double optionalValue(Item item) {
+        return item == null || item.val() == null || item.val().isBlank() ? null : value(item);
+    }
+
+    private static OffsetDateTime parseTimestamp(String value) {
+        try {
+            return OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        } catch (RuntimeException ignored) {
+            try {
+                return OffsetDateTime.parse(value, COMPACT_OFFSET_TIME);
+            } catch (RuntimeException exception) {
+                throw new IllegalArgumentException("Invalid MQTT timestamp", exception);
+            }
+        }
+    }
+
+    private static OffsetDateTime minute(OffsetDateTime value) {
+        return value.withSecond(0).withNano(0);
+    }
+
+    private static String requestId(Notification notification, byte[] payload) {
+        if (notification.token() != null && !notification.token().isBlank()) {
+            String candidate = "mqtt-" + notification.token().trim();
+            if (candidate.length() <= 80) {
+                return candidate;
+            }
+        }
+        return "mqtt-" + UUID.nameUUIDFromBytes(new String(payload, StandardCharsets.UTF_8)
+                .getBytes(StandardCharsets.UTF_8));
+    }
+
+    public record MappedMinute(String deviceId, String requestId, MainSwitchMinutePoint point) {}
+
+    public record Notification(String token, String timestamp, String datatype, List<Item> body) {}
+
+    public record Item(String name, String id, String val, String unit, String quality, String timestamp) {}
+}

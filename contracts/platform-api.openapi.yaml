@@ -537,13 +537,15 @@ components:
           items: { $ref: '#/components/schemas/RecognitionItem' }
     SeparationResult:
       type: object
-      required: [event_time, separation_time, result_status, total_power_kw, initial_pv_kw, corrected_pv_kw, station_feedback_value, feedback_status, correction_kw, correction_ratio, confidence, model_version, batch_id, participating_nodes, model_window_start, model_window_end, remaining_load_kw, quality_status]
+      required: [event_time, separation_time, result_status, total_power_kw, initial_pv_kw, pv_activity_probability, interpolated_minutes, corrected_pv_kw, station_feedback_value, feedback_status, correction_kw, correction_ratio, confidence, model_version, batch_id, participating_nodes, model_window_start, model_window_end, remaining_load_kw, quality_status]
       properties:
         event_time: { type: string, format: date-time }
         separation_time: { type: string, format: date-time }
         result_status: { type: string, enum: [实时初始, 等待反馈, 已反馈校正] }
         total_power_kw: { type: number }
         initial_pv_kw: { type: number, minimum: 0 }
+        pv_activity_probability: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        interpolated_minutes: { type: integer, minimum: 0 }
         corrected_pv_kw: { type: [number, 'null'], minimum: 0 }
         station_feedback_value: { type: [number, 'null'] }
         feedback_status: { type: string, enum: [已反馈, 等待回传] }

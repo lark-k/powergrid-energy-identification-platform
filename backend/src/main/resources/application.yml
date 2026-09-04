@@ -58,6 +58,19 @@ platform:
     candidate-base-url: ${MODEL_CANDIDATE_SERVICE_BASE_URL:}
   imports:
     allowed-content-types: text/csv,application/json
+  mqtt:
+    enabled: ${MQTT_ENABLED:false}
+    broker-uri: ${MQTT_BROKER_URI:tcp://106.14.246.184:50077}
+    topic-filter: ${MQTT_TOPIC_FILTER:PAnt/Broadcast/JSON/report/notification/PM201/#}
+    client-id: ${MQTT_CLIENT_ID:powergrid-backend}
+    qos: ${MQTT_QOS:0}
+    connection-timeout-seconds: ${MQTT_CONNECTION_TIMEOUT_SECONDS:10}
+    keep-alive-seconds: ${MQTT_KEEP_ALIVE_SECONDS:45}
+    automatic-reconnect: ${MQTT_AUTOMATIC_RECONNECT:true}
+    clean-session: ${MQTT_CLEAN_SESSION:true}
+    reconnect-delay-ms: ${MQTT_RECONNECT_DELAY_MS:10000}
+    max-payload-bytes: ${MQTT_MAX_PAYLOAD_BYTES:262144}
+    device-station-mappings: ${MQTT_DEVICE_STATION_MAPPINGS:202606050023=A01}
 
 springdoc:
   api-docs:

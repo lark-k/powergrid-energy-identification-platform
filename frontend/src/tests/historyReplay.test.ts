@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_DATASET, snapshotAt } from "../mocks/generator";
-import { historyReplayBounds, snapshotFromReplayStart } from "../stores/useDemoStore";
+import { historyReplayBounds, snapshotFromReplayStart, useDemoStore } from "../stores/useDemoStore";
 
 describe("history replay", () => {
+  it("starts every fresh application session in live mode", () => {
+    expect(useDemoStore.getState().viewMode).toBe("live");
+  });
+
   it("starts at the beginning of the selected range and reveals the first minute only", () => {
     const dataRange = {
       first_event_time: "2026-08-01T00:00:00.000Z",
@@ -10,6 +14,7 @@ describe("history replay", () => {
       minute_count: 780,
       recognition_result_count: 661,
       separation_result_count: 541,
+      available_dates: ["2026-08-01"],
     };
 
     const replay = historyReplayBounds(new Date("2026-08-01T13:00:00.000Z"), "1h", dataRange);
@@ -26,6 +31,7 @@ describe("history replay", () => {
       minute_count: 780,
       recognition_result_count: 661,
       separation_result_count: 541,
+      available_dates: ["2026-08-01"],
     };
 
     const replay = historyReplayBounds(new Date("2026-08-03T00:00:00.000Z"), "6h", dataRange);

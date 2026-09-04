@@ -3,6 +3,7 @@ import type { EChartsOption } from "echarts";
 import { COLOR } from "../../config/system";
 import type { SeparationResult, StationSnapshot, TimeRange } from "../../types/domain";
 import { dateTimeText, percentText, powerText, timeText } from "../../utils/format";
+import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../../utils/separation";
 import { EChart } from "../../components/charts/EChart";
 import { powerAxisScale, powerAxisTickText, visibleMainSwitchPoints, visibleSeparationResults } from "./chartData";
 
@@ -74,8 +75,9 @@ export function PowerSeparationChart({ snapshot, range, onSelect }: Props) {
           <div class="tip-grid"><i>生成时间</i><em>${timeText(row.separation_time, true)}</em><i>到达时间</i><em>${batch ? timeText(batch.arrival_time, true) : "等待回传"}</em>
           <i>台区总功率</i><em>${powerText(row.total_power_kw)} kW</em><i>初始光伏</i><em class="blue">${powerText(row.initial_pv_kw)} kW</em>
           <i>校正后光伏</i><em class="green">${powerText(row.corrected_pv_kw)} kW</em><i>分站参考</i><em class="amber">${powerText(row.station_feedback_value)} kW</em>
-          <i>反馈状态</i><em>${row.feedback_status}</em><i>置信度</i><em>${percentText(row.confidence)}</em>
-          <i>模型</i><em>${row.model_version}</em><i>批次</i><em>${row.batch_id ?? "—"}</em></div>`;
+          <i>反馈状态</i><em>${row.feedback_status}</em><i>${separationConfidenceLabel(row)}</i><em>${percentText(separationConfidenceValue(row))}</em>
+          <i>输入数据质量</i><em>${separationQualityText(row)}</em><i>模型</i><em>${row.model_version}</em>
+          <i>批次</i><em>${row.batch_id ?? "—"}</em></div>`;
       },
     },
     xAxis: {

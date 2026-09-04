@@ -68,6 +68,8 @@ export interface SeparationResult {
   result_status: ResultStatus;
   total_power_kw: number;
   initial_pv_kw: number;
+  pv_activity_probability: number | null;
+  interpolated_minutes: number;
   corrected_pv_kw: number | null;
   station_feedback_value: number | null;
   feedback_status: FeedbackStatus;
@@ -164,6 +166,7 @@ export interface StationDataRange {
   minute_count: number;
   recognition_result_count: number;
   separation_result_count: number;
+  available_dates: string[];
 }
 
 export type ViewMode = "live" | "history";

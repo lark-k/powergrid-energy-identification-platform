@@ -43,8 +43,8 @@ for (let i = 0; i < DATA_DAYS * 1440; i += 1) {
   mainSwitch.push({
     station_id: SYSTEM_CONFIG.stationId,
     event_time: event.toISOString(),
-    active_power_kw: Math.round(total),
-    reactive_power_kvar: Math.round(total * 0.18),
+    active_power_kw: total,
+    reactive_power_kvar: total * 0.18,
     voltage: Math.round((231.5 + noise(i, 3.2)) * 10) / 10,
     current: Math.round((total / 0.38) * 10) / 10,
     pf: Math.round((0.965 + noise(i, 0.018)) * 1000) / 1000,
@@ -114,7 +114,7 @@ const appendBatch = (arrival: Date, periods: Date[], plan: Pick<BatchPlan, "miss
       period_end: new Date(start.getTime() + 15 * minute).toISOString(),
       arrival_time: arrival.toISOString(),
       batch_id: batchId,
-      pv_value: Math.max(0, Math.round(pv * (node.capacity_kw / capacityTotal) * (0.985 + noise(batchSequence * 50 + periodIndex * 7 + nodeIndex, 0.03)))),
+      pv_value: Math.max(0, pv * (node.capacity_kw / capacityTotal) * (0.985 + noise(batchSequence * 50 + periodIndex * 7 + nodeIndex, 0.03))),
       value_type: "average_power",
       capacity_kw: node.capacity_kw,
       quality_flag: plan.warning && nodeIndex === 3 && periodIndex === 1 ? "warning" : "good",
@@ -203,11 +203,13 @@ export function snapshotAt(nowInput: Date): StationSnapshot {
       separation_time: new Date(event.getTime() + 2_100 + Math.abs(noise(index, 1400))).toISOString(),
       result_status: hasFeedback ? "已反馈校正" : ageMinutes <= 5 ? "实时初始" : "等待反馈",
       total_power_kw: point.active_power_kw,
-      initial_pv_kw: Math.round(initial),
-      corrected_pv_kw: corrected == null ? null : Math.round(corrected),
+      initial_pv_kw: initial,
+      pv_activity_probability: hasFeedback ? 0.936 : 0.872,
+      interpolated_minutes: 0,
+      corrected_pv_kw: corrected,
       station_feedback_value: reference,
       feedback_status: hasFeedback ? "已反馈" : "等待回传",
-      correction_kw: correction == null ? null : Math.round(correction),
+      correction_kw: correction,
       correction_ratio: correction == null || initial === 0 ? null : correction / initial,
       confidence: hasFeedback ? 0.936 : 0.872,
       model_version: SYSTEM_CONFIG.modelVersion,
@@ -215,7 +217,7 @@ export function snapshotAt(nowInput: Date): StationSnapshot {
       participating_nodes: [...new Set(matching.map((row) => row.node_id))],
       model_window_start: new Date(event.getTime() - 60 * minute).toISOString(),
       model_window_end: point.event_time,
-      remaining_load_kw: Math.max(0, Math.round(point.active_power_kw - (corrected ?? initial))),
+      remaining_load_kw: point.active_power_kw + (corrected ?? initial),
     };
   });
 
@@ -228,8 +230,8 @@ export function snapshotAt(nowInput: Date): StationSnapshot {
       const referenceRows = arrivedByPeriod.get(period) ?? [];
       const reference = referenceRows.length ? referenceRows.reduce((sum, row) => sum + row.pv_value, 0) : before;
       return { correction_id: `C-${batchIndex + 1}-${periodIndex + 1}`, batch_id: batch.batch_id, period_start: period,
-        period_end: new Date(start.getTime() + 15 * minute).toISOString(), before_kw: Math.round(before), reference_kw: Math.round(reference),
-        after_kw: Math.round(reference), correction_kw: Math.round(before - reference), confidence: batch.completeness_ratio * 0.97,
+        period_end: new Date(start.getTime() + 15 * minute).toISOString(), before_kw: before, reference_kw: reference,
+        after_kw: reference, correction_kw: before - reference, confidence: batch.completeness_ratio * 0.97,
         reason: "分站同期反馈约束，保持分钟曲线形状回补", updated_at: batch.arrival_time };
     });
   });

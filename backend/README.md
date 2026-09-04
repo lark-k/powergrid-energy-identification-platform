@@ -4,7 +4,13 @@ Java 21 / Spring Boot 3.5 模块化单体。后台不加载 PyTorch checkpoint�
 
 ## 模块
 
-`security`、`station`、`measurement`、`recognition/model`、`separation`、`feedback`、`correction`、`training`、`process/realtime`、`audit` 和 `integration/modelservice` 分别承担权限、总开幂等接入、推理持久化、历史反馈校正、模型注册发布、实时事件与审计。
+`security`、`station`、`measurement`、`recognition/model`、`separation`、`feedback`、`correction`、`training`、`process/realtime`、`audit`、`integration/mqtt` 和 `integration/modelservice` 分别承担权限、总开幂等接入、MQTT 协议适配、推理持久化、历史反馈校正、模型注册发布、实时事件与审计。
+
+## MQTT 实时接入
+
+设置 `MQTT_ENABLED=true` 后，后台匿名连接 `MQTT_BROKER_URI`，订阅 `MQTT_TOPIC_FILTER`。测录终端消息中的 `TotW_MA`、`PhW_phsA_MA`、`PhW_phsB_MA` 和 `PhW_phsC_MA` 会转换为现有分钟点并触发两套模型。测点时间统一截断到分钟，协议中的 `quality=0` 映射为 `good`，其他值映射为 `warning`。
+
+设备与台区通过逗号分隔的 `MQTT_DEVICE_STATION_MAPPINGS` 配置，例如 `202606050023=A01,另一个设备=另一个台区`。目标台区必须已存在。当前 Broker 不使用用户名和密码；如果部署多个后台实例，每个实例必须配置不同的 `MQTT_CLIENT_ID`。
 
 Flyway V1 可从空 PostgreSQL 创建核心业务表，V2 增加可审计的历史推理回放任务。开发演示数据仅位于 `db/devdata`，只有 `dev`/`test` profile 会加载；生产不会自动写入 Mock 数据。
 

@@ -4,6 +4,7 @@ import { DownloadSimple, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useDemoStore } from "../../stores/useDemoStore";
 import type { StationSnapshot } from "../../types/domain";
 import { dateTimeText, percentText, powerText, timeText } from "../../utils/format";
+import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../../utils/separation";
 import { VirtualDataTable, type DataRow } from "../../components/data-display/VirtualDataTable";
 
 const column = (header: string, accessorKey: string, size: number): ColumnDef<DataRow> => ({ header, accessorKey, size });
@@ -25,8 +26,8 @@ export function DataDrawer({ snapshot }: { snapshot: StationSnapshot }) {
       data: snapshot.corrections.map((row) => ({ id: row.correction_id, batch: row.batch_id, period: `${timeText(row.period_start)}–${timeText(row.period_end)}`, before: powerText(row.before_kw), reference: powerText(row.reference_kw), after: powerText(row.after_kw), delta: powerText(row.correction_kw), confidence: percentText(row.confidence) })),
     };
     return {
-      columns: [column("event_time", "event", 170), column("总功率", "total", 100), column("初始光伏", "initial", 100), column("校正光伏", "corrected", 100), column("校正量", "delta", 90), column("结果状态", "status", 120), column("反馈状态", "feedback", 100), column("批次", "batch", 180)],
-      data: snapshot.separation_results.map((row) => ({ event: dateTimeText(row.event_time), total: powerText(row.total_power_kw), initial: powerText(row.initial_pv_kw), corrected: powerText(row.corrected_pv_kw), delta: powerText(row.correction_kw), status: row.result_status, feedback: row.feedback_status, batch: row.batch_id ?? "—" })),
+      columns: [column("event_time", "event", 170), column("总功率", "total", 100), column("初始光伏", "initial", 100), column("活动概率", "activity", 100), column("输入质量", "quality", 170), column("校正光伏", "corrected", 100), column("校正量", "delta", 90), column("结果状态", "status", 120), column("反馈状态", "feedback", 100), column("批次", "batch", 180)],
+      data: snapshot.separation_results.map((row) => ({ event: dateTimeText(row.event_time), total: powerText(row.total_power_kw), initial: powerText(row.initial_pv_kw), activity: row.pv_activity_probability == null ? "—" : percentText(row.pv_activity_probability), quality: separationQualityText(row), corrected: powerText(row.corrected_pv_kw), delta: powerText(row.correction_kw), status: row.result_status, feedback: row.feedback_status, batch: row.batch_id ?? "—" })),
     };
   }, [drawerTab, snapshot]);
   const filtered = query ? data.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(query.toLowerCase()))) : data;
@@ -39,6 +40,7 @@ export function DataDrawer({ snapshot }: { snapshot: StationSnapshot }) {
         <div><dt>原始综合功率</dt><dd>{powerText(selected.total_power_kw)} kW</dd></div><div><dt>初始分离值</dt><dd>{powerText(selected.initial_pv_kw)} kW</dd></div>
         <div><dt>校正后光伏</dt><dd>{powerText(selected.corrected_pv_kw)} kW</dd></div><div><dt>生成时间</dt><dd>{dateTimeText(selected.separation_time)}</dd></div>
         <div><dt>反馈批次</dt><dd>{selected.batch_id ?? "等待回传"}</dd></div><div><dt>参与节点</dt><dd>{selected.participating_nodes.join("、") || "—"}</dd></div>
+        <div><dt>{separationConfidenceLabel(selected)}</dt><dd>{percentText(separationConfidenceValue(selected))}</dd></div><div><dt>输入数据质量</dt><dd>{separationQualityText(selected)}</dd></div>
         <div><dt>模型输入窗口</dt><dd>{timeText(selected.model_window_start)}–{timeText(selected.model_window_end)}</dd></div><div><dt>模型版本</dt><dd>{selected.model_version}</dd></div>
       </dl> : null}</section></div>
   </aside>;

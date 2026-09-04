@@ -36,6 +36,7 @@ describe("RestStationAdapter", () => {
     const range = {
       first_event_time: "2026-07-01T00:00:00Z", last_event_time: "2026-07-07T23:59:00Z",
       minute_count: 10080, recognition_result_count: 9961, separation_result_count: 9841,
+      available_dates: ["2025-01-01", "2025-01-02"],
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(range), {
       status: 200, headers: { "Content-Type": "application/json" },

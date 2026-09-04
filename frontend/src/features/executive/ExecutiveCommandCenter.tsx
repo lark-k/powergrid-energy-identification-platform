@@ -12,7 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { SYSTEM_CONFIG } from "../../config/system";
 import { useDemoStore } from "../../stores/useDemoStore";
-import type { SeparationResult, TimeRange } from "../../types/domain";
+import type { ConnectionState, SeparationResult, TimeRange } from "../../types/domain";
 import { dateTimeText, percentText } from "../../utils/format";
 import { EnergyRiver, type LifecycleStage } from "./EnergyRiver";
 import { HistoryWindow, type HistorySelection } from "./HistoryWindow";
@@ -22,6 +22,10 @@ import { SignalMiniChart, type SignalPoint } from "./SignalMiniChart";
 import { SignalDetailModal, type SignalDetailSpec } from "./SignalDetailModal";
 
 const minute = 60_000;
+
+export const shouldShowBusinessAlert = (connection: ConnectionState, error: unknown) => Boolean(error)
+  || connection === "offline"
+  || connection === "degraded";
 
 const nearestRange = (durationMinutes: number): TimeRange => {
   if (durationMinutes <= 60) return "1h";
@@ -40,13 +44,14 @@ const closestResult = (results: SeparationResult[], at: string) => {
 
 export function ExecutiveCommandCenter() {
   const {
-    now, snapshot, stations, stationId, viewMode, historyAt, historyStartAt, historyCursor, dataRange,
+    now, snapshot, stations, stationId, viewMode, historyAt, historyStartAt, historyCursor, dataRange, range,
     selected, connection, error, busy, settings, load, advance, connect, setStation, setRange,
     setHistoryAt, goLive, selectResult,
   } = useDemoStore();
   const [activeStage, setActiveStage] = useState<LifecycleStage | null>(null);
   const [activeSignal, setActiveSignal] = useState<SignalDetailSpec["title"] | null>(null);
   const [selection, setSelection] = useState<HistorySelection>(() => ({ start: Date.now() - 6 * 60 * minute, end: Date.now() }));
+  const [liveFollowing, setLiveFollowing] = useState(true);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => viewMode === "live" ? connect() : undefined, [connect, stationId, viewMode]);
@@ -55,13 +60,20 @@ export function ExecutiveCommandCenter() {
     return () => window.clearInterval(timer);
   }, [advance]);
   useEffect(() => {
+    if (viewMode === "live") return;
     if (!dataRange?.first_event_time || !dataRange.last_event_time) return;
     const minimum = new Date(dataRange.first_event_time).getTime();
     const maximum = new Date(dataRange.last_event_time).getTime() + minute;
     const end = historyAt ? new Date(historyAt).getTime() : maximum;
     const start = historyStartAt ? new Date(historyStartAt).getTime() : Math.max(minimum, end - SYSTEM_CONFIG.timeRanges["6h"] * minute);
     setSelection({ start: gsap.utils.clamp(minimum, maximum - minute, start), end: gsap.utils.clamp(minimum + minute, maximum, end) });
-  }, [dataRange?.first_event_time, dataRange?.last_event_time, historyAt, historyStartAt, stationId]);
+  }, [dataRange?.first_event_time, dataRange?.last_event_time, historyAt, historyStartAt, stationId, viewMode]);
+  useEffect(() => {
+    if (viewMode !== "live" || !liveFollowing) return;
+    const end = now.getTime();
+    const start = end - SYSTEM_CONFIG.timeRanges[range] * minute;
+    setSelection((current) => current.start === start && current.end === end ? current : { start, end });
+  }, [liveFollowing, now, range, viewMode]);
   useEffect(() => {
     if (!activeStage) return;
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") setActiveStage(null); };
@@ -105,6 +117,16 @@ export function ExecutiveCommandCenter() {
     await setHistoryAt(new Date(selection.end).toISOString(), new Date(selection.start).toISOString());
   }, [selection.end, selection.start, setHistoryAt, setRange]);
 
+  const changeSelection = useCallback((next: HistorySelection) => {
+    if (viewMode === "live") setLiveFollowing(false);
+    setSelection(next);
+  }, [viewMode]);
+
+  const returnToLive = useCallback(async () => {
+    setLiveFollowing(true);
+    await goLive();
+  }, [goLive]);
+
   if (!snapshot) return <main className="executive-app executive-loading">
     <div className="loading-mark"><Pulse className="spin" /><b>{error ? "业务后台暂不可用" : "正在接入电网业务数据"}</b><span>{error?.message ?? "读取台区分钟数据、分站反馈与模型状态"}</span>{error && <button onClick={() => void load()}>重新连接</button>}</div>
   </main>;
@@ -126,13 +148,13 @@ export function ExecutiveCommandCenter() {
       <div className="header-center"><ShieldCheck weight="duotone" /><span><strong>仅监测分析，不下发控制</strong><small>数据采集 → 模型训练 → 模型验证 → 模型应用</small></span></div>
       <div className="header-status">
         {stations.length > 1 && <label><Buildings /><select aria-label="选择台区" value={stationId} onChange={(event) => void setStation(event.target.value)}>{stations.map((item) => <option key={item.station_id} value={item.station_id}>{item.station_name}</option>)}</select></label>}
-        <HistoryWindow dataRange={dataRange} selection={selection} cursor={cursorMs} viewMode={viewMode} busy={busy} onChange={setSelection} onApply={applyHistory} onGoLive={goLive} />
+        <HistoryWindow dataRange={dataRange} selection={selection} cursor={cursorMs} viewMode={viewMode} liveFollowing={liveFollowing} busy={busy} onChange={changeSelection} onApply={applyHistory} onGoLive={returnToLive} />
         <span className={`connection ${connection}`}><i />{connection === "online" ? "业务链路在线" : connection === "connecting" ? "正在连接" : connection === "degraded" ? "降级运行" : "链路离线"}</span>
         <span><Clock />{dateTimeText(viewMode === "history" && historyCursor ? historyCursor : now)}</span>
       </div>
     </header>
 
-    {(error || connection !== "online") && <div className={`executive-alert ${connection}`} role="status"><WarningCircle />{error?.message ?? "部分业务链路处于非正常状态；页面不会以模拟数据替代真实结果。"}</div>}
+    {shouldShowBusinessAlert(connection, error) && <div className={`executive-alert ${connection}`} role="status"><WarningCircle />{error?.message ?? "部分业务链路处于非正常状态；页面不会以模拟数据替代真实结果。"}</div>}
 
     <section className="executive-hero">
       <EnergyRiver snapshot={snapshot} activeStage={activeStage} playbackProgress={playbackProgress} reducedMotion={settings.reducedEffects} onOpen={setActiveStage} />

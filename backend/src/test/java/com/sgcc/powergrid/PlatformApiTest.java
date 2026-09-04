@@ -155,7 +155,44 @@ class PlatformApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.minute_count").isNumber())
                 .andExpect(jsonPath("$.recognition_result_count").isNumber())
-                .andExpect(jsonPath("$.separation_result_count").isNumber());
+                .andExpect(jsonPath("$.separation_result_count").isNumber())
+                .andExpect(jsonPath("$.available_dates").isArray());
+    }
+
+    @Test
+    void snapshotExposesInputQualityAndAddsPositivePvGenerationToSignedNetPower() throws Exception {
+        OffsetDateTime target = OffsetDateTime.parse("2050-09-04T17:37:00+08:00");
+        jdbc.sql("""
+                        insert into pv_separation_result (
+                          separation_id, station_id, event_time, separation_time,
+                          input_window_start, input_window_end, interpolated_minutes,
+                          quality_status, total_power_kw, initial_pv_kw,
+                          pv_activity_probability, corrected_pv_kw, station_feedback_value,
+                          correction_kw, correction_ratio, correction_confidence, batch_id,
+                          model_version, model_summary, deployment_role, request_id,
+                          created_at, updated_at
+                        ) values (:id, 'A01', :target, :target, :windowStart, :target,
+                          24, 'warning', -0.81368, 2.425342321395874, 0.9962142109870911,
+                          null, null, null, null, null, null, 'signed-net-test', '{}',
+                          'active', :requestId, :target, :target)
+                        """)
+                .param("id", UUID.randomUUID().toString())
+                .param("target", target)
+                .param("windowStart", target.minusMinutes(239))
+                .param("requestId", "signed-net-test-" + UUID.randomUUID())
+                .update();
+
+        String response = mvc.perform(get("/api/v1/stations/A01/snapshot")
+                        .param("at", target.plusMinutes(1).toString()).param("range", "1h"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.separation_results[0].pv_activity_probability").value(0.9962142109870911))
+                .andExpect(jsonPath("$.separation_results[0].interpolated_minutes").value(24))
+                .andExpect(jsonPath("$.separation_results[0].quality_status").value("warning"))
+                .andReturn().getResponse().getContentAsString();
+
+        double remainingLoad = objectMapper.readTree(response)
+                .path("separation_results").path(0).path("remaining_load_kw").asDouble();
+        assertThat(remainingLoad).isEqualTo(-0.81368 + 2.425342321395874);
     }
 
     @Test

@@ -10,11 +10,8 @@ export const powerText = (value: number | null | undefined) => {
   if (value == null) return "—";
   const magnitude = Math.abs(value);
   if (magnitude > 0 && magnitude < 0.01) {
-    return value.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
+    return value.toLocaleString("zh-CN", { minimumFractionDigits: 3, maximumFractionDigits: 4 });
   }
-  if (magnitude > 0 && magnitude < 1) {
-    return value.toLocaleString("zh-CN", { maximumFractionDigits: 3 });
-  }
-  return Math.round(value).toLocaleString("zh-CN");
+  return value.toLocaleString("zh-CN", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 };
 export const percentText = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`;
