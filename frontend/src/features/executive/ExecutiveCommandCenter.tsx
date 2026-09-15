@@ -2,6 +2,8 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import gsap from "gsap";
 import {
+  ArrowsIn,
+  ArrowsOut,
   Broadcast,
   Buildings,
   Clock,
@@ -52,6 +54,27 @@ export function ExecutiveCommandCenter() {
   const [activeSignal, setActiveSignal] = useState<SignalDetailSpec["title"] | null>(null);
   const [selection, setSelection] = useState<HistorySelection>(() => ({ start: Date.now() - 6 * 60 * minute, end: Date.now() }));
   const [liveFollowing, setLiveFollowing] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      setFullscreenError(null);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    setFullscreenError(null);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      setFullscreenError("无法切换全屏，请重试或检查浏览器权限");
+    }
+  };
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => viewMode === "live" ? connect() : undefined, [connect, stationId, viewMode]);
@@ -151,6 +174,11 @@ export function ExecutiveCommandCenter() {
         <HistoryWindow dataRange={dataRange} selection={selection} cursor={cursorMs} viewMode={viewMode} liveFollowing={liveFollowing} busy={busy} onChange={changeSelection} onApply={applyHistory} onGoLive={returnToLive} />
         <span className={`connection ${connection}`}><i />{connection === "online" ? "业务链路在线" : connection === "connecting" ? "正在连接" : connection === "degraded" ? "降级运行" : "链路离线"}</span>
         <span><Clock />{dateTimeText(viewMode === "history" && historyCursor ? historyCursor : now)}</span>
+        <button type="button" className="fullscreen-toggle" aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+          title={isFullscreen ? "退出全屏" : "进入全屏"} aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}>
+          {isFullscreen ? <ArrowsIn aria-hidden="true" /> : <ArrowsOut aria-hidden="true" />}
+        </button>
+        {fullscreenError && <div className="fullscreen-error" role="status">{fullscreenError}</div>}
       </div>
     </header>
 

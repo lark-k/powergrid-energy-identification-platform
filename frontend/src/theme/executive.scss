@@ -68,6 +68,15 @@ button { color: inherit; }
 .header-status svg { width: 17px; height: 17px; color: var(--ex-cyan); }
 .header-status select { max-width: 150px; border: 0; outline: 0; color: var(--ex-text); background: transparent; }
 .header-status option { color: #10212d; }
+.executive-header .fullscreen-toggle {
+  flex: 0 0 38px; width: 38px; height: 38px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass-surface);
+  box-shadow: inset 0 1px rgba(182, 222, 241, .08); cursor: pointer;
+  &:hover, &[aria-pressed="true"] { border-color: var(--ex-cyan); background: rgba(22, 61, 79, .85); }
+  &:focus-visible { outline: 2px solid var(--ex-cyan); outline-offset: 3px; }
+  svg { width: 20px; height: 20px; }
+}
+.fullscreen-error { position: absolute; top: calc(100% + 8px); right: 0; padding: 8px 12px; border: 1px solid var(--ex-line); border-radius: 8px; background: var(--ex-bg); color: var(--ex-text); font-size: 12px; white-space: nowrap; }
 .connection i, .history-mode i, .lifecycle-source i { width: 8px; height: 8px; border-radius: 50%; background: var(--ex-green); box-shadow: 0 0 12px rgba(84, 239, 173, .7); }
 .connection.connecting i { background: var(--ex-amber); }
 .connection.degraded i, .connection.offline i { background: var(--ex-danger); }
