@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClockCounterClockwise, Database, Info, LockOpen, Rows } from "@phosphor-icons/react";
+import { Circle, ClockCounterClockwise, Database, Info, LockOpen, Rows } from "@phosphor-icons/react";
 import type { SeparationResult, StationSnapshot } from "../../types/domain";
 import { dateTimeText, percentText, powerText, timeText } from "../../utils/format";
 import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../../utils/separation";
@@ -11,6 +11,8 @@ interface MinuteLedgerProps {
   selected: SeparationResult | null;
   onSelect: (result: SeparationResult) => void;
 }
+
+const statusTone = (row: SeparationResult) => row.quality_status !== "good" ? "warning" : row.feedback_status === "已反馈" ? "good" : "waiting";
 
 export function MinuteLedger({ snapshot, selection, selected, onSelect }: MinuteLedgerProps) {
   const [pinned, setPinned] = useState<SeparationResult | null>(null);
@@ -50,12 +52,13 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
     <div className="ledger-layout">
       <div className="ledger-table" role="table" aria-label="分钟结果记录">
         <div className="ledger-head" role="row">
-          <span>时刻</span><span>总开有功</span><span>初始光伏</span><span>矫正后光伏</span><span>分站反馈</span><span>状态</span><span>模型版本</span>
+          <span>时刻</span><span className="ledger-metric cyan"><Circle weight="fill" />总开有功</span><span className="ledger-metric green"><Circle weight="fill" />初始光伏</span><span className="ledger-metric violet"><Circle weight="fill" />矫正后光伏</span><span className="ledger-metric amber"><Circle weight="fill" />分站反馈</span><span>状态</span><span>模型版本</span>
         </div>
         <div className="ledger-scroll">
           {rows.length ? rows.map((row) => <button
             key={row.event_time}
             className={`ledger-row ${detail?.event_time === row.event_time ? "active" : ""}`}
+            aria-pressed={detail?.event_time === row.event_time}
             onClick={() => { setPinned(row); onSelect(row); }}
           >
             <span><ClockCounterClockwise />{timeText(row.event_time)}</span>
@@ -64,9 +67,9 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
             <span>{row.corrected_pv_kw == null ? "—" : `${powerText(row.corrected_pv_kw)} kW`}</span>
             <span>{row.station_feedback_value == null ? "等待" : `${powerText(row.station_feedback_value)} kW`}</span>
             <span
-              className={`status ${row.quality_status !== "good" ? "warning" : row.feedback_status === "已反馈" ? "good" : "waiting"}`}
+              className={`status ${statusTone(row)}`}
               title={separationQualityText(row)}
-            >{row.result_status}{row.quality_status !== "good" ? " · 告警" : ""}</span>
+            ><Circle weight="fill" />{row.result_status}{row.quality_status !== "good" ? " · 告警" : ""}</span>
             <span title={row.model_version}>{row.model_version}</span>
           </button>) : <div className="ledger-empty">该时间段暂无真实分离记录</div>}
         </div>
@@ -74,7 +77,7 @@ export function MinuteLedger({ snapshot, selection, selected, onSelect }: Minute
 
       <aside className="minute-detail">
         <div className="detail-title"><Info weight="duotone" /><span><b>{detail ? dateTimeText(detail.event_time) : "请选择一条记录"}</b><small>event_time 时刻追溯</small></span>{pinned && <button type="button" className="detail-unlock" aria-label="详情已锁定，点击解锁并恢复自动跟随" onClick={() => setPinned(null)}><LockOpen weight="fill" />已锁定 · 解锁</button>}</div>
-        {detail ? <dl>{detailRows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd title={value}>{value}</dd></div>)}</dl> : <div className="detail-empty">从左侧列表或上方曲线选择时刻</div>}
+        {detail ? <dl>{detailRows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd title={value}>{label === "结果状态" ? <span className={`status ${statusTone(detail)}`}><Circle weight="fill" />{value}</span> : value}</dd></div>)}</dl> : <div className="detail-empty">从左侧列表或上方曲线选择时刻</div>}
       </aside>
     </div>
   </section>;

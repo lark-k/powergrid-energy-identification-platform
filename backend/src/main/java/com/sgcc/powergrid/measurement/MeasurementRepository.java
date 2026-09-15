@@ -113,10 +113,16 @@ public class MeasurementRepository {
                                coverage_ratio, quality_flag, source_id
                         from main_switch_minute
                         where station_id = :stationId and event_time <= :targetTime
+                          and event_time >= :windowStart
+                          and (source_id = (select source_id from main_switch_minute
+                                where station_id = :stationId and event_time = :targetTime)
+                            or (select source_id from main_switch_minute
+                                where station_id = :stationId and event_time = :targetTime) not like 'mqtt:%')
                         order by event_time desc limit :limit
                         """)
                 .param("stationId", stationId)
                 .param("targetTime", targetTime)
+                .param("windowStart", targetTime.minusMinutes(limit - 1L))
                 .param("limit", limit)
                 .query().listOfRows();
         Collections.reverse(rows);

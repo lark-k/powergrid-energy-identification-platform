@@ -59,7 +59,7 @@ services:
       MQTT_TOPIC_FILTER: ${MQTT_TOPIC_FILTER:-PAnt/Broadcast/JSON/report/notification/PM201/#}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-powergrid-backend}
       MQTT_QOS: ${MQTT_QOS:-0}
-      MQTT_DEVICE_STATION_MAPPINGS: ${MQTT_DEVICE_STATION_MAPPINGS:-202606050023=A01}
+      MQTT_DEVICE_STATION_MAPPINGS: ${MQTT_DEVICE_STATION_MAPPINGS:-202606050023=A01:disabled,202601230004=A01:main_switch,202601230001=A01:pv:-1}
     depends_on:
       postgres: { condition: service_healthy }
       model-service: { condition: service_healthy }

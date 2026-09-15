@@ -1,4 +1,5 @@
 @use "sass:color";
+@use "executive-glass";
 
 :root {
   --ex-bg: #020912;
@@ -272,3 +273,5 @@ button { color: inherit; }
   .executive-hero { grid-template-columns: minmax(0, 1fr) 330px; }.river-layout { padding: 28px 12px; }.journey-stages { height: 90px; }
   .ledger-layout { grid-template-columns: minmax(0, 1.9fr) 310px; }.lifecycle-header { grid-template-columns: 270px 1fr 42px; }.lifecycle-source { display: none; }
 }
+
+@include executive-glass.surfaces;

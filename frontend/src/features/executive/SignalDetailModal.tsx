@@ -5,6 +5,7 @@ import { EChart } from "../../components/charts/EChart";
 import { powerAxisScale, powerAxisTickText } from "../separation/chartData";
 import { powerText } from "../../utils/format";
 import type { SignalPoint } from "./SignalMiniChart";
+import { signalColors, signalSeries } from "./signalAppearance";
 
 export interface SignalDetailSpec {
   title: "总开有功" | "初始光伏" | "矫正后光伏" | "分站反馈";
@@ -21,7 +22,6 @@ interface SignalDetailModalProps {
   onClose: () => void;
 }
 
-const toneColor = { cyan: "#62d9ff", green: "#54efad", violet: "#bd7cff", amber: "#ffc45f" } as const;
 const processMap = {
   "总开有功": ["总开计量采集", "分钟质量检查", "因果窗口输入"],
   "初始光伏": ["功率分离推理", "初始结果生成", "等待反馈锚点"],
@@ -34,7 +34,7 @@ const toTime = (value: string) => new Date(value).toLocaleString("zh-CN", { hour
 export function SignalDetailModal({ spec, onSelect, onClose }: SignalDetailModalProps) {
   const [zoomLocked, setZoomLocked] = useState(false);
   const [zoomRevision, setZoomRevision] = useState(0);
-  const color = toneColor[spec.tone];
+  const color = signalColors[spec.tone];
   const unit = spec.unit ?? "kW";
   const values = spec.data.map((point) => point.value);
   const latest = values.at(-1) ?? null;
@@ -63,7 +63,7 @@ export function SignalDetailModal({ spec, onSelect, onClose }: SignalDetailModal
       animationDurationUpdate: 380,
       animationEasing: "cubicOut",
       animationEasingUpdate: "linear",
-      grid: { left: 72, right: 30, top: 38, bottom: 78 },
+      grid: { left: 58, right: 22, top: 30, bottom: 70 },
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "cross", lineStyle: { color: `${color}99` } },
@@ -76,18 +76,22 @@ export function SignalDetailModal({ spec, onSelect, onClose }: SignalDetailModal
         },
       },
       xAxis: { type: "time", axisLine: { lineStyle: { color: "rgba(130, 184, 214, .34)" } }, axisLabel: { color: "#9bb9c7", fontSize: 12, hideOverlap: true }, splitLine: { show: false } },
-      yAxis: { type: "value", min: scale.min, max: scale.max, interval: scale.interval, name: unit, nameTextStyle: { color: "#8eabba" }, axisLabel: { color: "#88a8b8", fontSize: 12, formatter: powerAxisTickText }, splitLine: { lineStyle: { color: "rgba(125, 176, 205, .13)" } } },
-      dataZoom: [{ type: "inside", start: 0, end: 100 }, { type: "slider", height: 26, bottom: 22, borderColor: "rgba(120,190,220,.22)", backgroundColor: "rgba(5,22,36,.7)", fillerColor: `${color}24`, handleStyle: { color } }],
-      series: [{
-        type: "line", showSymbol: false, smooth: 0.18, data: spec.data.map((point) => [new Date(point.at).getTime(), point.value]),
-        lineStyle: { color, width: 2.8 }, areaStyle: { color: `${color}16` },
+      yAxis: { type: "value", min: scale.min, max: scale.max, interval: scale.interval, name: unit, nameTextStyle: { color: "#a9c0cd" }, axisLabel: { color: "#a9c0cd", fontSize: 12, formatter: powerAxisTickText }, splitLine: { lineStyle: { color: "rgba(151, 185, 204, .14)", type: "dashed" } } },
+      dataZoom: [{ type: "inside", start: 0, end: 100 }, {
+        type: "slider", height: 24, bottom: 18, borderColor: "rgba(113,174,204,.3)",
+        backgroundColor: "rgba(6,20,31,.94)", fillerColor: `${color}12`,
+        dataBackground: { lineStyle: { color: "#7193a6", width: 1 }, areaStyle: { color: "#7193a6", opacity: .08 } },
+        selectedDataBackground: { lineStyle: { color, width: 1.4 }, areaStyle: { color, opacity: .14 } },
+        handleStyle: { color, borderColor: "#dff6ff", borderWidth: 1, shadowBlur: 4, shadowColor: `${color}55` },
+        moveHandleSize: 0, textStyle: { color: "#b2c8d4" },
       }],
+      series: [signalSeries(spec.data, color, true)],
     };
   }, [color, spec.data, unit, values]);
 
   return <div className="signal-detail-overlay" role="dialog" aria-modal="true" aria-label={`${spec.title}曲线详细分析`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className={`signal-detail-shell ${spec.tone}`}>
-      <header><div><ArrowsOutSimple /><span><small>曲线详细分析</small><b>{spec.title}</b></span></div><div className="signal-detail-stream"><i /><span><b>{spec.streamingLabel ?? "数据持续更新"}</b><small>与首页曲线同步推进</small></span></div><button aria-label="关闭曲线详情" onClick={onClose}><X /></button></header>
+      <header><div className="signal-detail-heading"><ArrowsOutSimple /><span><small>曲线详细分析</small><b>{spec.title}</b></span></div>
       <div className="signal-detail-kpis">
         <article><small>最新值</small><b>{latest == null ? "—" : `${powerText(latest)} ${unit}`}</b></article>
         <article><small>最大值</small><b>{maximum == null ? "—" : `${powerText(maximum)} ${unit}`}</b></article>
@@ -95,6 +99,7 @@ export function SignalDetailModal({ spec, onSelect, onClose }: SignalDetailModal
         <article><small>平均值</small><b>{average == null ? "—" : `${powerText(average)} ${unit}`}</b></article>
         <article><small>真实数据点</small><b>{spec.data.length.toLocaleString()} 条</b></article>
       </div>
+      <div className="signal-detail-stream"><i /><span><b>{spec.streamingLabel ?? "数据持续更新"}</b><small>与首页曲线同步推进</small></span></div><button aria-label="关闭曲线详情" onClick={onClose}><X /></button></header>
       <div className="signal-detail-layout">
         <section className="signal-detail-chart-panel">
           <div className="signal-detail-caption"><ChartLineUp /><span><b>完整时间曲线</b><small>{spec.data.length ? `${toTime(spec.data[0].at)} — ${toTime(spec.data.at(-1)!.at)}` : "当前窗口暂无真实数据"}</small></span>{zoomLocked && <button type="button" className="zoom-unlock" aria-label="滑动窗口已锁定，点击解锁并恢复完整范围" onClick={unlockZoom}><LockOpen />解锁并恢复全窗口</button>}</div>

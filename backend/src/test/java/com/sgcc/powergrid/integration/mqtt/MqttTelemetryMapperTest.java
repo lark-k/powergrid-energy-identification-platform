@@ -71,12 +71,53 @@ class MqttTelemetryMapperTest {
     }
 
     @Test
-    void rejectsUnknownDevice() {
-        assertThatThrownBy(() -> mapper.map(
+    void ignoresUnknownDeviceOnSharedWildcard() throws Exception {
+        assertThat(mapper.map(
                         "PAnt/Broadcast/JSON/report/notification/PM201/unknown",
-                        payload("0", "0", true)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("No station mapping");
+                        payload("0", "0", true))).isEmpty();
+    }
+
+    @Test
+    void routesPvSeparatelyWithExplicitGenerationDirection() throws Exception {
+        var routed = roleMapper(List.of("pv=A01:pv:-1", "main=A01:main_switch", "old=A01:disabled"));
+        var pv = routed.map("topic/pv", payload("0", "0", false)).orElseThrow();
+        assertThat(pv.point()).isNull();
+        assertThat(pv.feedback().stationId()).isEqualTo("A01");
+        assertThat(pv.feedback().points()).singleElement().satisfies(point -> {
+            assertThat(point.nodeId()).isEqualTo("pv");
+            assertThat(point.pvValue()).isEqualTo(0.789214);
+            assertThat(point.periodEnd()).isEqualTo(point.eventTime().plusMinutes(1));
+        });
+        assertThat(pv.feedback().capacityCoverageRatio()).isZero();
+        assertThat(routed.map("topic/old", new byte[]{1})).isEmpty();
+        var main = routed.map("topic/main", payload("0", "0", true)).orElseThrow();
+        assertThat(main.feedback()).isNull();
+        assertThat(main.point().activePowerKw()).isEqualTo(-0.789214);
+        byte[] consuming = new String(payload("0", "0", true), StandardCharsets.UTF_8)
+                .replace("-0.789214", "0.789214").getBytes(StandardCharsets.UTF_8);
+        assertThat(routed.map("topic/pv", consuming).orElseThrow().feedback().points().getFirst().pvValue()).isZero();
+        byte[] retransmitted = new String(payload("0", "0", true), StandardCharsets.UTF_8)
+                .replace("20260904121517491", "another-token").getBytes(StandardCharsets.UTF_8);
+        assertThat(routed.map("topic/pv", retransmitted).orElseThrow().feedback().batchId())
+                .isEqualTo(pv.feedback().batchId());
+    }
+
+    @Test
+    void rejectsConflictingRolesOrInvalidDirection() {
+        assertThatThrownBy(() -> roleMapper(List.of("one=A01:main_switch", "two=A01")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Only one active");
+        assertThatThrownBy(() -> roleMapper(List.of("one=A01:pv", "two=A01:pv")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Only one active");
+        assertThatThrownBy(() -> roleMapper(List.of("one=A01:main_switch:-1")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("power direction");
+        assertThatThrownBy(() -> roleMapper(List.of("one=A01:unknown")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("role");
+    }
+
+    static MqttTelemetryMapper roleMapper(List<String> mappings) {
+        return new MqttTelemetryMapper(new ObjectMapper(), new MqttTelemetryProperties(
+                false, "tcp://localhost:1883", "topic/#", "test", 0, 10, 45,
+                true, true, 10000, 262144, mappings));
     }
 
     @Test

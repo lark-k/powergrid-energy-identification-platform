@@ -46,6 +46,6 @@ describe("RestStationAdapter", () => {
 
   it.each([401, 403, 404, 422, 500, 503])("maps HTTP %s to a structured error", async (status) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: `E${status}`, message: "backend message", request_id: "req-1" }), { status, headers: { "Content-Type": "application/json" } })));
-    await expect(new RestStationAdapter("").listStations()).rejects.toMatchObject<Partial<PlatformApiError>>({ status, code: `E${status}`, requestId: "req-1" });
+    await expect(new RestStationAdapter("").listStations()).rejects.toMatchObject({ status, code: `E${status}`, requestId: "req-1" } satisfies Partial<PlatformApiError>);
   });
 });

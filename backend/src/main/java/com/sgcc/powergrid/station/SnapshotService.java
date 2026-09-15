@@ -448,7 +448,10 @@ public class SnapshotService {
         output.put("last_inference_ms", state.lastInferenceMs());
         output.put("last_inference_time", state.lastInferenceTime() != null
                 ? state.lastInferenceTime() : persistedInferenceTime);
-        output.put("window_status", !serviceReady ? "delayed" : separationVersion != null ? "ready" : "warming_up");
+        // An archived model version does not mean a newly connected meter has a complete input window.
+        output.put("window_status", !serviceReady ? "delayed"
+                : state.lastInferenceTime() != null ? state.windowStatus()
+                : separationVersion != null ? "ready" : "warming_up");
         return output;
     }
 

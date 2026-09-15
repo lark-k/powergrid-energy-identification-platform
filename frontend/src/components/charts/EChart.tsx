@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { init, use, type EChartsType } from "echarts/core";
 import { EffectScatterChart, LineChart, LinesChart, ScatterChart } from "echarts/charts";
-import { DataZoomComponent, GraphicComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
+import { DataZoomComponent, GraphicComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, MarkPointComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 
-use([LineChart, LinesChart, ScatterChart, EffectScatterChart, DataZoomComponent, GraphicComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent, CanvasRenderer]);
+use([LineChart, LinesChart, ScatterChart, EffectScatterChart, DataZoomComponent, GraphicComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, MarkPointComponent, TooltipComponent, CanvasRenderer]);
 
 interface EChartProps {
   option: EChartsOption;
@@ -78,9 +78,10 @@ export function EChart({ option, className, onClick, preserveTooltipOnUpdate = f
     if (!ref.current) return;
     const chart = init(ref.current, undefined, { renderer: "canvas" });
     chartRef.current = chart;
-    const rememberAxisPointer = (event: AxisPointerEvent) => {
+    const rememberAxisPointer = (payload: unknown) => {
       if (!pointerInsideRef.current) return;
-      const value = event.axesInfo?.find((axis) => axis.axisDim === "x")?.value;
+      const event = payload as AxisPointerEvent | null;
+      const value = event?.axesInfo?.find((axis) => axis.axisDim === "x")?.value;
       const timestamp = Number(value);
       if (Number.isFinite(timestamp)) hoveredTimestampRef.current = timestamp;
     };

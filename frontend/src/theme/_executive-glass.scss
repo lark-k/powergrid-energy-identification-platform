@@ -1,0 +1,163 @@
+// Shared optical surfaces for the approved chart and minute-ledger references.
+// Reflections stay at the perimeter; data remains on a stable ink surface.
+@mixin surfaces {
+  :root {
+    --glass-ink: #06131e;
+    --glass-edge: rgba(113, 174, 204, .30);
+    --glass-divider: rgba(128, 175, 200, .13);
+    --glass-muted: #a9c1cf;
+    --glass-surface: linear-gradient(115deg, rgba(72, 120, 149, .045), transparent 30%), linear-gradient(180deg, rgba(9, 24, 36, .97), rgba(5, 18, 29, .98) 38%, rgba(6, 20, 31, .97));
+    --glass-shadow: inset 0 1px 0 rgba(182, 222, 241, .12), inset 0 -1px 0 rgba(101, 164, 196, .045), 0 8px 24px rgba(0, 4, 10, .22);
+  }
+
+  // Scope header treatment to the toolbar; the energy-flow scene stays untouched.
+  .executive-header {
+    background: var(--glass-surface);
+    border-bottom-color: var(--glass-edge);
+    box-shadow: inset 0 1px rgba(182, 222, 241, .1), 0 8px 24px rgba(0, 4, 10, .22);
+    .brand-emblem { background: rgba(6, 22, 34, .8); border-color: var(--glass-edge); box-shadow: inset 0 1px rgba(182, 222, 241, .1), 0 0 14px rgba(42, 176, 229, .08); }
+    .header-status > span, .header-status label, .history-compact > summary {
+      background: var(--glass-surface); border-color: var(--glass-edge); box-shadow: inset 0 1px rgba(182, 222, 241, .08);
+    }
+  }
+
+  .signal-card, .signal-detail-shell {
+    --signal-accent: var(--ex-cyan);
+    &.green { --signal-accent: var(--ex-green); }
+    &.violet { --signal-accent: var(--ex-violet); }
+    &.amber { --signal-accent: var(--ex-amber); }
+  }
+
+  .signal-stack { gap: 10px; grid-template-rows: repeat(4, minmax(156px, 1fr)); }
+  .signal-stack .signal-card, .minute-ledger, .signal-detail-shell {
+    border: 1px solid var(--glass-edge);
+    border-radius: 13px;
+    background: var(--glass-surface);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(16px) saturate(105%);
+  }
+  .signal-stack .signal-card {
+    grid-template-rows: 44px minmax(80px, 1fr) 30px;
+    > header { padding: 10px 15px 0; align-items: baseline; gap: 10px; }
+    > header div { min-width: 0; gap: 7px; }
+    > header span { white-space: nowrap; font-size: 16px; letter-spacing: .015em; }
+    > header small { color: var(--glass-muted); white-space: nowrap; font-size: 11px; }
+    > header strong { color: var(--signal-accent); font-size: 23px; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+    > footer { padding: 0 13px; border-color: var(--glass-divider); background: rgba(84, 139, 169, .025); color: #b9d0de; font-size: 11px; }
+    > footer i { width: 6px; height: 6px; box-shadow: 0 0 6px rgba(172, 219, 242, .35); }
+    .signal-chart { background: rgba(4, 15, 25, .14); }
+    &.is-openable:hover { transform: none; border-color: rgba(137, 203, 233, .48); box-shadow: var(--glass-shadow), 0 0 12px rgba(98, 217, 255, .055); }
+    &.is-openable:focus-visible { outline: 2px solid var(--signal-accent); outline-offset: 3px; transform: none; }
+  }
+  .signal-conclusion { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signal-open-hint { flex: 0 0 auto; white-space: nowrap; }
+  .signal-open-hint svg { color: var(--signal-accent); }
+
+  .signal-detail-overlay { padding: 24px; background: rgba(0, 6, 13, .64); backdrop-filter: blur(10px); }
+  .signal-detail-shell {
+    width: min(1680px, calc(100vw - 48px)); height: min(900px, calc(100dvh - 48px));
+    grid-template-rows: auto minmax(0, 1fr); border-radius: 18px;
+    box-shadow: var(--glass-shadow), 0 35px 100px rgba(0, 0, 0, .6);
+    > header { min-height: 104px; padding: 18px 24px; gap: 20px; background: rgba(93, 151, 183, .025); border-color: var(--glass-divider); }
+    > header .signal-detail-heading { flex: 0 0 auto; gap: 10px; }
+    > header .signal-detail-heading > svg { display: none; }
+    > header .signal-detail-heading b { font-size: 25px; white-space: nowrap; }
+    > header small { color: var(--glass-muted); letter-spacing: .025em; }
+    > header .signal-detail-kpis { flex: 1; min-width: 0; display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); gap: 0; padding: 0; border: 0; }
+    .signal-detail-kpis article { min-width: 0; min-height: 51px; padding: 0 16px; border: 0; border-left: 1px solid var(--glass-divider); border-radius: 0; background: none; }
+    .signal-detail-kpis small { font-size: 12px; }
+    .signal-detail-kpis b { margin-top: 7px; font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    &.cyan, &.green, &.violet, &.amber {
+      .signal-detail-kpis b { color: #eaf4fa; }
+      .signal-detail-kpis article:first-child b { color: var(--signal-accent); }
+    }
+    .signal-detail-kpis article:first-child b { font-size: 27px; }
+    .signal-detail-stream { flex: 0 0 auto; margin: 0; }
+    .signal-detail-stream small { color: #a0bcca !important; }
+    > header button { flex: 0 0 auto; width: 42px; height: 42px; border-color: var(--glass-edge); background: rgba(90, 153, 185, .045); border-radius: 8px; box-shadow: inset 0 1px rgba(182, 222, 241, .08); }
+    > header button:hover { background: rgba(90, 153, 185, .12); }
+    > header button:focus-visible { outline: 2px solid var(--signal-accent); outline-offset: 3px; }
+  }
+  .signal-detail-layout { grid-template-columns: minmax(0, 1fr) clamp(300px, 23vw, 350px); }
+  .signal-detail-chart-panel { padding: 20px; border-color: var(--glass-divider); background: rgba(3, 14, 23, .36); }
+  .signal-detail-caption { flex-wrap: wrap; gap: 7px 16px; align-content: center; }
+  .signal-detail-caption > svg { display: none; }
+  .signal-detail-caption span { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 6px 20px; }
+  .signal-detail-caption b { font-size: 17px; }
+  .signal-detail-caption small { color: #b1c7d3; margin: 0; }
+  .signal-detail-chart { min-height: 0; }
+  .signal-detail-side { background: rgba(91, 147, 180, .018); }
+  .signal-detail-side > section { padding: 20px; border-color: var(--glass-divider); }
+  .signal-detail-side h3 { margin-bottom: 16px; font-size: 16px; }
+  .signal-detail-side h3 svg { color: var(--signal-accent); }
+  .signal-process { position: relative; grid-template-columns: 1fr; gap: 0; }
+  .signal-process article { position: relative; min-height: 39px; padding: 0; display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 14px; border: 0; border-radius: 0; background: none; }
+  .signal-process article:not(:last-child)::after { content: ""; position: absolute; top: 32px; bottom: -7px; left: 12px; width: 1px; background: rgba(174, 205, 222, .24); }
+  .signal-process span { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--signal-accent) 35%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--signal-accent) 9%, transparent); color: var(--signal-accent); font-size: 11px; }
+  .signal-process b { margin: 0; font-size: 13px; font-weight: 500; }
+  .signal-detail-side p { padding-top: 12px; border-top: 1px solid var(--glass-divider); color: #b9ced9; overflow-wrap: anywhere; }
+  .signal-recent-list button { min-height: 35px; border-color: rgba(161, 196, 216, .12); font-variant-numeric: tabular-nums; }
+  .signal-recent-list button:nth-child(odd) { background: rgba(171, 208, 229, .025); }
+  .signal-recent-list button:hover { background: rgba(98, 217, 255, .09); }
+  .signal-recent-list button:focus-visible { outline: 2px solid var(--signal-accent); outline-offset: -2px; }
+  .signal-recent-list span { font-size: 11px; white-space: nowrap; }
+  .signal-recent-list b { font-size: 12px; white-space: nowrap; }
+
+  .minute-ledger { width: calc(100% - 44px); border-radius: 14px; }
+  .minute-ledger > header { min-height: 76px; border-color: var(--glass-divider); background: rgba(90, 151, 183, .02); }
+  .minute-ledger > header small, .ledger-count { color: var(--glass-muted); }
+  .ledger-table { overflow-x: auto; background: rgba(3, 15, 26, .32); border-color: var(--glass-divider); }
+  .ledger-head, .ledger-row { grid-template-columns: 65px repeat(4, minmax(85px, 1fr)) minmax(112px, 1.1fr) minmax(165px, 1.65fr); gap: 12px; }
+  .ledger-head { min-width: 870px; padding-right: 24px; height: 48px; color: #acc5d3; background: rgba(88, 144, 177, .035); border-color: var(--glass-divider); }
+  .ledger-head > span:nth-child(n+2):nth-child(-n+5), .ledger-row > span:nth-child(n+2):nth-child(-n+5) { text-align: right; }
+  .ledger-head .ledger-metric { display: flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+  .ledger-metric svg { width: 8px; height: 8px; flex: 0 0 auto; }
+  .ledger-metric.cyan svg { color: var(--ex-cyan); }.ledger-metric.green svg { color: var(--ex-green); }.ledger-metric.violet svg { color: var(--ex-violet); }.ledger-metric.amber svg { color: var(--ex-amber); }
+  .ledger-scroll { min-width: 870px; scrollbar-gutter: stable; }
+  .ledger-row { min-height: 46px; color: #dcebf3; font-variant-numeric: tabular-nums; border-color: rgba(144, 187, 211, .09); }
+  .ledger-row:nth-child(even) { background: rgba(153, 195, 219, .025); }
+  .ledger-row:hover { background: rgba(106, 181, 215, .085); }
+  .ledger-row.active { background: rgba(87, 179, 218, .13); box-shadow: inset 3px 0 var(--ex-cyan); }
+  .ledger-row:focus-visible { outline: 2px solid var(--ex-cyan); outline-offset: -2px; }
+  .ledger-row > span:first-child svg { color: #9cbccc; }
+  .ledger-row > span:last-child { color: #b5ccd9; font-size: 12px; letter-spacing: -.025em; }
+  .minute-ledger .status { max-width: 100%; width: fit-content; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid rgba(255, 196, 95, .32); border-radius: 20px; background: rgba(255, 196, 95, .055); color: #ffd18a; font-size: 12px; white-space: nowrap; }
+  .minute-ledger .status svg { width: 7px; height: 7px; flex: 0 0 auto; }
+  .minute-ledger .status.good { color: #80ecc2; background: rgba(84, 239, 173, .055); border-color: rgba(84, 239, 173, .3); }
+  .minute-ledger .status.warning { color: #ffabb8; background: rgba(255, 112, 133, .08); border-color: rgba(255, 112, 133, .4); }
+  .minute-detail { min-width: 0; background: rgba(86, 144, 176, .02); box-shadow: inset 1px 0 var(--glass-divider); }
+  .detail-title { flex-wrap: wrap; border-color: var(--glass-divider); }
+  .detail-title > span { min-width: 0; }
+  .detail-title b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .detail-title > svg { flex: 0 0 auto; }
+  .detail-unlock { min-height: 28px; font-size: 11px; }
+  .minute-detail dl > div { min-height: 32px; grid-template-columns: minmax(85px, auto) minmax(0, 1fr); gap: 8px; border-color: rgba(151, 191, 214, .1); }
+  .minute-detail dt { color: #a0becf; }
+  .minute-detail dd { color: #dfedf5; font-variant-numeric: tabular-nums; }
+  .minute-detail dd .status { vertical-align: middle; }
+  .ledger-table, .ledger-scroll, .signal-recent-list { scrollbar-width: thin; scrollbar-color: #628296 transparent; }
+  .ledger-table::-webkit-scrollbar, .ledger-scroll::-webkit-scrollbar, .signal-recent-list::-webkit-scrollbar { width: 8px; height: 8px; }
+  .ledger-table::-webkit-scrollbar-thumb, .ledger-scroll::-webkit-scrollbar-thumb, .signal-recent-list::-webkit-scrollbar-thumb { border: 2px solid #142936; border-radius: 8px; background: #628296; }
+
+  @media (max-width: 1450px) {
+    .signal-detail-shell > header { gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
+    .signal-detail-shell > header .signal-detail-heading { order: 0; }
+    .signal-detail-shell > header .signal-detail-stream { order: 1; margin-left: auto; }
+    .signal-detail-shell > header > button { order: 2; }
+    .signal-detail-shell > header .signal-detail-kpis { order: 3; flex-basis: 100%; }
+    .signal-detail-shell .signal-detail-kpis article:first-child { padding-left: 0; border-left: 0; }
+    .signal-detail-shell .signal-detail-kpis article:first-child b { font-size: 23px; }
+    .signal-detail-side > section { padding: 16px; }
+    .signal-detail-chart-panel { padding: 16px; }
+    .signal-stack .signal-card > header small { font-size: 10px; }
+    .signal-stack .signal-card > header strong { font-size: 21px; }
+  }
+  @media (max-height: 680px) {
+    .signal-detail-overlay { padding: 12px; }
+    .signal-detail-shell { height: calc(100dvh - 24px); }
+    .signal-detail-side { overflow-y: auto; display: block; }
+    .signal-detail-side > section:last-child { display: block; }
+    .signal-detail-shell > header { min-height: 72px; padding-top: 10px; padding-bottom: 10px; }
+  }
+  .reduced-effects .signal-stack .signal-card, .reduced-effects .minute-ledger { backdrop-filter: none; }
+}

@@ -4,6 +4,7 @@ import { ArrowsOut } from "@phosphor-icons/react";
 import { EChart } from "../../components/charts/EChart";
 import { powerAxisScale, powerAxisTickText } from "../separation/chartData";
 import { powerText } from "../../utils/format";
+import { signalColors, signalSeries } from "./signalAppearance";
 
 export interface SignalPoint {
   at: string;
@@ -20,13 +21,6 @@ interface SignalMiniChartProps {
   onOpen?: () => void;
 }
 
-const toneColor = {
-  cyan: "#62d9ff",
-  green: "#54efad",
-  violet: "#bd7cff",
-  amber: "#ffc45f",
-} as const;
-
 const clickTime = (params: unknown) => {
   const value = (params as { value?: unknown })?.value;
   if (!Array.isArray(value)) return null;
@@ -35,7 +29,7 @@ const clickTime = (params: unknown) => {
 };
 
 export function SignalMiniChart({ title, tone, unit = "kW", data, conclusion, onSelect, onOpen }: SignalMiniChartProps) {
-  const color = toneColor[tone];
+  const color = signalColors[tone];
   const latest = data.at(-1)?.value ?? null;
   const option = useMemo<EChartsOption>(() => {
     const values = data.map((point) => point.value);
@@ -45,7 +39,7 @@ export function SignalMiniChart({ title, tone, unit = "kW", data, conclusion, on
       animationDuration: 800,
       animationDurationUpdate: 380,
       animationEasing: "cubicOut",
-      grid: { left: 48, right: 12, top: 10, bottom: 28 },
+      grid: { left: 44, right: 18, top: 10, bottom: 28 },
       tooltip: {
         trigger: "axis",
         backgroundColor: "rgba(4, 17, 34, .96)",
@@ -62,7 +56,7 @@ export function SignalMiniChart({ title, tone, unit = "kW", data, conclusion, on
         type: "time",
         axisLine: { lineStyle: { color: "rgba(130, 184, 214, .28)" } },
         axisTick: { show: false },
-        axisLabel: { color: "#85a9bc", fontSize: 11, hideOverlap: true },
+        axisLabel: { color: "#adc3cf", fontSize: 11, hideOverlap: true },
         splitLine: { show: false },
       },
       yAxis: {
@@ -70,19 +64,10 @@ export function SignalMiniChart({ title, tone, unit = "kW", data, conclusion, on
         min: scale.min,
         max: scale.max,
         interval: scale.interval,
-        axisLabel: { color: "#7898aa", fontSize: 10, formatter: powerAxisTickText },
-        splitLine: { lineStyle: { color: "rgba(125, 176, 205, .12)" } },
+        axisLabel: { color: "#9db8c7", fontSize: 10, hideOverlap: true, formatter: powerAxisTickText },
+        splitLine: { lineStyle: { color: "rgba(151, 185, 204, .13)", type: "dashed" } },
       },
-      series: [{
-        type: "line",
-        showSymbol: false,
-        smooth: 0.22,
-        connectNulls: false,
-        data: data.map((point) => [new Date(point.at).getTime(), point.value]),
-        lineStyle: { color, width: 2 },
-        areaStyle: { color: `${color}18` },
-        emphasis: { lineStyle: { width: 3 } },
-      }],
+      series: [signalSeries(data, color)],
     };
   }, [color, data, unit]);
 
@@ -99,6 +84,6 @@ export function SignalMiniChart({ title, tone, unit = "kW", data, conclusion, on
       preserveTooltipOnUpdate
       onClick={(params) => { const at = clickTime(params); if (at) onSelect?.(at); }}
     /> : <div className="signal-empty">当前时间窗口暂无真实数据</div>}
-    <footer><i />{conclusion}{onOpen && <span className="signal-open-hint"><ArrowsOut />查看详情</span>}</footer>
+    <footer><i /><span className="signal-conclusion" title={conclusion}>{conclusion}</span>{onOpen && <span className="signal-open-hint"><ArrowsOut />查看详情</span>}</footer>
   </article>;
 }

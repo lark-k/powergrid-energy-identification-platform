@@ -11,6 +11,7 @@ import com.sgcc.powergrid.measurement.IngestionModels.Receipt;
 import com.sgcc.powergrid.measurement.IngestionService;
 import com.sgcc.powergrid.measurement.MainSwitchMinutePoint;
 import com.sgcc.powergrid.measurement.MeasurementRepository;
+import com.sgcc.powergrid.feedback.FeedbackService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,7 @@ class MqttTelemetryMessageProcessorTest {
         IngestionService ingestion = mock(IngestionService.class);
         MeasurementRepository measurements = mock(MeasurementRepository.class);
         MqttTelemetryMessageProcessor processor =
-                new MqttTelemetryMessageProcessor(mapper, ingestion, measurements);
+                new MqttTelemetryMessageProcessor(mapper, ingestion, measurements, mock(FeedbackService.class));
         byte[] payload = {1};
         MainSwitchMinutePoint previous = point("2026-09-04T19:48:00+08:00", -0.802, -0.234, -0.288, -0.280);
         MainSwitchMinutePoint current = point("2026-09-04T19:50:00+08:00", -0.794, -0.233, -0.285, -0.276);

@@ -70,7 +70,7 @@ platform:
     clean-session: ${MQTT_CLEAN_SESSION:true}
     reconnect-delay-ms: ${MQTT_RECONNECT_DELAY_MS:10000}
     max-payload-bytes: ${MQTT_MAX_PAYLOAD_BYTES:262144}
-    device-station-mappings: ${MQTT_DEVICE_STATION_MAPPINGS:202606050023=A01}
+    device-station-mappings: ${MQTT_DEVICE_STATION_MAPPINGS:202606050023=A01:disabled,202601230004=A01:main_switch,202601230001=A01:pv:-1}
 
 springdoc:
   api-docs:

@@ -4,6 +4,7 @@ import com.sgcc.powergrid.measurement.IngestionModels.Receipt;
 import com.sgcc.powergrid.measurement.IngestionService;
 import com.sgcc.powergrid.measurement.MainSwitchMinutePoint;
 import com.sgcc.powergrid.measurement.MeasurementRepository;
+import com.sgcc.powergrid.feedback.FeedbackService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,14 +21,17 @@ public class MqttTelemetryMessageProcessor {
     private final MqttTelemetryMapper mapper;
     private final IngestionService ingestionService;
     private final MeasurementRepository measurements;
+    private final FeedbackService feedbackService;
 
     public MqttTelemetryMessageProcessor(
             MqttTelemetryMapper mapper,
             IngestionService ingestionService,
-            MeasurementRepository measurements) {
+            MeasurementRepository measurements,
+            FeedbackService feedbackService) {
         this.mapper = mapper;
         this.ingestionService = ingestionService;
         this.measurements = measurements;
+        this.feedbackService = feedbackService;
     }
 
     public void process(String topic, byte[] payload) throws IOException {
@@ -36,8 +40,17 @@ public class MqttTelemetryMessageProcessor {
             return;
         }
         var minute = mapped.get();
+        if (minute.feedback() != null) {
+            var receipt = feedbackService.ingest(minute.feedback(), minute.requestId());
+            LOGGER.info("MQTT PV feedback processed device={} station={} event_time={} data_time={} frame_time={} pv_kw={} status={} corrected={}",
+                    minute.deviceId(), minute.feedback().stationId(), minute.feedback().coverageStart(),
+                    minute.dataTime(), minute.frameTime(), minute.feedback().points().getFirst().pvValue(),
+                    receipt.status(), receipt.correctedMinutes());
+            return;
+        }
         List<MainSwitchMinutePoint> points = new ArrayList<>(2);
         measurements.latestBefore(minute.point().stationId(), minute.point().eventTime())
+                .filter(previous -> previous.sourceId().equals(minute.point().sourceId()))
                 .filter(previous -> previous.eventTime().plusMinutes(2).isEqual(minute.point().eventTime()))
                 .map(previous -> midpoint(previous, minute.point()))
                 .ifPresent(points::add);

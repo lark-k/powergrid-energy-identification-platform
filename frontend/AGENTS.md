@@ -10,6 +10,10 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Project-specific design decisions
 
+- The latest approved whole-page reference is `../docs/design-qa/glass-upgrade/harmonized-reference.png`. It supersedes the earlier bright glass material: use deep navy smoked glass, subdued thin edges, small upper reflections, 13–14px card radii and restrained curve bloom. Apply the same material to the toolbar, four mini charts, minute ledger and all four chart detail windows. Keep the entire left energy-flow region unchanged, including content, layout, assets, animation and styles. Preserve the previous detail window structure and all data/interaction behavior.
+- The 2026-09-15 approved glass upgrade references are `../docs/design-qa/glass-upgrade/{cards,detail,ledger}-reference.png`. Use consistent smoky graphite-blue glass, fine perimeter highlights, stable dark data areas, and cyan/green/violet/amber measurement accents across these three surfaces. The expanded chart uses a compact top metric strip and vertical process steps. Curves have a substantial sharp stroke, restrained glow, subtle zero-baseline fill, and a latest-point marker. Preserve real data, precision, missing-value semantics, hover/zoom locks, and minute-detail locks; mock values are never data sources.
+- For frontend-only Docker upgrades, rebuild/recreate only the frontend service with dependencies excluded. Keep the MQTT backend, PostgreSQL, and model service running; verify container identity/start time and persisted minute continuity before and after the frontend replacement.
+
 - The selected source of truth is `../docs/design-qa/assets/reference/design-reference.png`: a 1920x1080 dark Aurora Signal Lab command-center screen with the main chart as the dominant surface.
 - Do not add play, pause, single-step, speed, or other media-player controls. Demo data runs automatically from the mock adapter.
 - Keep the data layer replaceable through service adapters so mock data can later switch to REST/WebSocket/SSE without changing UI components.

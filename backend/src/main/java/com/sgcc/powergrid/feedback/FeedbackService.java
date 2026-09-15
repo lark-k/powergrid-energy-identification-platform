@@ -102,8 +102,13 @@ public class FeedbackService {
     public void reconcileArrivedBatches() {
         List<Map<String, Object>> batches = jdbc.sql("""
                         select b.batch_id, b.request_id from pv_feedback_batch b
-                        where b.arrival_time <= :now and not exists (
-                          select 1 from correction_record c where c.batch_id = b.batch_id
+                        where b.arrival_time <= :now and exists (
+                          select 1 from pv_feedback_point p
+                          join pv_separation_result r on r.station_id = p.station_id
+                            and r.event_time >= p.event_time and r.event_time < p.period_end
+                          where p.batch_id = b.batch_id and r.deployment_role = 'active'
+                            and r.corrected_pv_kw is null
+                            and (r.initial_pv_kw > 0 or p.pv_value = 0)
                         ) order by b.arrival_time limit 50
                         """).param("now", OffsetDateTime.now()).query().listOfRows();
         batches.forEach(row -> correctBatch(String.valueOf(row.get("batch_id")), String.valueOf(row.get("request_id"))));

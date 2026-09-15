@@ -81,6 +81,26 @@ class PlatformApiTest {
     }
 
     @Test
+    @org.springframework.transaction.annotation.Transactional
+    void newMeterWarmupIsNotOverriddenByAnArchivedSeparationModel() throws Exception {
+        OffsetDateTime oldTime = OffsetDateTime.now().minusDays(10);
+        jdbc.sql("""
+                insert into pv_separation_result (
+                  separation_id, station_id, event_time, separation_time, input_window_start,
+                  input_window_end, interpolated_minutes, quality_status, total_power_kw,
+                  initial_pv_kw, pv_activity_probability, model_version, model_summary,
+                  deployment_role, request_id, created_at, updated_at)
+                values ('SEP-WARMUP-TEST', 'A01', :t, :t, :t, :t,
+                  0, 'good', 10, 2, 0.9, 'old-pv-test', '{}', 'active', 'test', :t, :t)
+                """).param("t", oldTime).update();
+        runtimeState.success(null, null, 1, OffsetDateTime.now(), "warming_up");
+        mvc.perform(get("/api/v1/stations/A01/snapshot").param("range", "1h"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.model_health.window_status").value("warming_up"))
+                .andExpect(jsonPath("$.model_health.separation_status").value("running"));
+    }
+
+    @Test
     void stationAccessPreventsHorizontalPrivilegeEscalation() throws Exception {
         mvc.perform(get("/api/v1/stations/A01/snapshot")
                         .header("X-Dev-User", "unassigned-viewer")

@@ -58,6 +58,17 @@ deploy/runtime-data/
 .codegraph/
 **/.codex_tmp*/
 
+# Local design QA reports, browser captures, and generated comparisons
+# Keep approved reference images and user-facing documentation assets versioned.
+/design-qa.md
+/docs/design-qa/design-qa.md
+/docs/design-qa/assets/comparison/
+/docs/design-qa/assets/comparisons/
+/docs/design-qa/assets/implementation/
+/docs/design-qa/assets/renders/
+/docs/design-qa/glass-upgrade/*
+!/docs/design-qa/glass-upgrade/*-reference.png
+
 # Generated model datasets and inference/training outputs
 SGCC-project/energy_device_detection/artifacts/*.npz
 SGCC-project/energy_device_detection/artifacts/aligned_*.csv
