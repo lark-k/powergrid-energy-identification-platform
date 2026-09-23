@@ -1,0 +1,32 @@
+[
+  {
+    "seed": 42,
+    "parameters": 44330,
+    "cpu_median_ms": 13.44920000701677,
+    "cpu_p95_ms": 14.644114981638268,
+    "causal_prefix_error": 8.121132850646973e-07,
+    "future_tail_error": 0.0,
+    "cpu_threads": 4,
+    "latency_scope": "single model, batch=1 full window forward, no I/O"
+  },
+  {
+    "seed": 2026,
+    "parameters": 44330,
+    "cpu_median_ms": 13.237900013336912,
+    "cpu_p95_ms": 13.977719991817139,
+    "causal_prefix_error": 1.6242265701293945e-06,
+    "future_tail_error": 0.0,
+    "cpu_threads": 4,
+    "latency_scope": "single model, batch=1 full window forward, no I/O"
+  },
+  {
+    "seed": 3407,
+    "parameters": 44330,
+    "cpu_median_ms": 13.331750000361353,
+    "cpu_p95_ms": 14.19109001144534,
+    "causal_prefix_error": 3.2782554626464844e-07,
+    "future_tail_error": 0.0,
+    "cpu_threads": 4,
+    "latency_scope": "single model, batch=1 full window forward, no I/O"
+  }
+]

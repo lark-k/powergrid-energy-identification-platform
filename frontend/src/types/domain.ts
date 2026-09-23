@@ -17,6 +17,8 @@ export interface MainSwitchMinutePoint {
   coverage_ratio?: number;
   quality_flag: QualityFlag;
   source_id?: string;
+  measurement_time?: string | null;
+  frame_time?: string | null;
 }
 
 export interface PVSubstationPoint {
@@ -29,6 +31,8 @@ export interface PVSubstationPoint {
   value_type: "average_power" | "energy";
   capacity_kw: number;
   quality_flag: QualityFlag;
+  measurement_time?: string | null;
+  frame_time?: string | null;
 }
 
 export interface FeedbackBatch {
@@ -83,6 +87,7 @@ export interface SeparationResult {
   model_window_end: string;
   remaining_load_kw: number;
   quality_status?: string;
+  max_consecutive_missing_minutes?: number;
 }
 
 export interface CorrectionRecord {

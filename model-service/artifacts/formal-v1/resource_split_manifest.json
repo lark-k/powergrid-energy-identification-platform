@@ -1,0 +1,356 @@
+{
+  "assignments": [
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-25",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-26",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-27",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-28",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-29",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-30",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-12-01",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-12-02",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-04",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-05",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-06",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-07",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-08",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-09",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-10",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-11",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-12",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-09",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-10",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-11",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-12",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-13",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-14",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-15",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-16",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-17",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-18",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-19",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-20",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-01-30",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-01-31",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-01",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-02",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-03",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-04",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-05",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-06",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-07",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-08",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-09",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-11",
+      "split": "domain_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-12",
+      "split": "domain_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-13",
+      "split": "domain_test"
+    }
+  ],
+  "excluded_shared_dates": [
+    "2025-12-03",
+    "2026-02-10"
+  ],
+  "buffer_minutes": 1440,
+  "maximum_history_minutes": 240,
+  "split_before_windows": true,
+  "domain_test_status": "previously inspected development domain, NOT untouched external",
+  "window": 120,
+  "original_only": true,
+  "generated_windows_after_split": true,
+  "current_minute_available_at": "minute_start + 1 minute, because features aggregate that minute",
+  "physical_clock_synchronization": "not independently certified",
+  "pairing_04_16": "user-designated candidate; NOT independently certified; exploratory charger metrics",
+  "energy_batch04_05": "unknown label due uncalibrated scale shift",
+  "train_stride": 1,
+  "seeds": [
+    42,
+    2026,
+    3407
+  ],
+  "channels": [
+    "TotW_MA",
+    "PhW_phsA_MA",
+    "PhW_phsB_MA",
+    "PhW_phsC_MA",
+    "TotVar_MA",
+    "PhVar_phsA_MA",
+    "PhVar_phsB_MA",
+    "PhVar_phsC_MA",
+    "PhV_phsA",
+    "PhV_phsB",
+    "PhV_phsC",
+    "A_phsA",
+    "A_phsB",
+    "A_phsC",
+    "TotPF_AA",
+    "TotW_PSD",
+    "PhW_phsA_PSD",
+    "PhW_phsB_PSD",
+    "PhW_phsC_PSD",
+    "TotVar_PSD",
+    "PhVar_phsA_PSD",
+    "PhVar_phsB_PSD",
+    "PhVar_phsC_PSD",
+    "TotW_MCU",
+    "PhW_phsA_MCU",
+    "PhW_phsB_MCU",
+    "PhW_phsC_MCU",
+    "TotW_MCD",
+    "PhW_phsA_MCD",
+    "PhW_phsB_MCD",
+    "PhW_phsC_MCD",
+    "TotW_MEA",
+    "PhW_phsA_MEA",
+    "PhW_phsB_MEA",
+    "PhW_phsC_MEA",
+    "A_SCC",
+    "TotVar_MCU",
+    "TotVar_MCD",
+    "TotVar_MEA",
+    "PhVar_phsA_MEA",
+    "PhVar_phsB_MEA",
+    "PhVar_phsC_MEA",
+    "TotW_AAC",
+    "PhW_phsA_AAC",
+    "PhW_phsB_AAC",
+    "PhW_phsC_AAC",
+    "TotVar_AAC",
+    "PhVar_phsA_AAC",
+    "PhVar_phsB_AAC",
+    "PhVar_phsC_AAC",
+    "ImbNg_TotW",
+    "ImbNg_TotVar",
+    "TotW_MEC",
+    "TotVar_MEC",
+    "TotW_MTS",
+    "TotVar_MTS",
+    "valid_TotW_MA",
+    "valid_PhW_phsA_MA",
+    "valid_PhW_phsB_MA",
+    "valid_PhW_phsC_MA",
+    "valid_TotVar_MA",
+    "valid_PhVar_phsA_MA",
+    "valid_PhVar_phsB_MA",
+    "valid_PhVar_phsC_MA",
+    "valid_PhV_phsA",
+    "valid_PhV_phsB",
+    "valid_PhV_phsC",
+    "valid_A_phsA",
+    "valid_A_phsB",
+    "valid_A_phsC",
+    "valid_TotPF_AA",
+    "valid_TotW_PSD",
+    "valid_PhW_phsA_PSD",
+    "valid_PhW_phsB_PSD",
+    "valid_PhW_phsC_PSD",
+    "valid_TotVar_PSD",
+    "valid_PhVar_phsA_PSD",
+    "valid_PhVar_phsB_PSD",
+    "valid_PhVar_phsC_PSD",
+    "valid_TotW_MCU",
+    "valid_PhW_phsA_MCU",
+    "valid_PhW_phsB_MCU",
+    "valid_PhW_phsC_MCU",
+    "valid_TotW_MCD",
+    "valid_PhW_phsA_MCD",
+    "valid_PhW_phsB_MCD",
+    "valid_PhW_phsC_MCD",
+    "valid_TotW_MEA",
+    "valid_PhW_phsA_MEA",
+    "valid_PhW_phsB_MEA",
+    "valid_PhW_phsC_MEA",
+    "valid_A_SCC",
+    "valid_TotVar_MCU",
+    "valid_TotVar_MCD",
+    "valid_TotVar_MEA",
+    "valid_PhVar_phsA_MEA",
+    "valid_PhVar_phsB_MEA",
+    "valid_PhVar_phsC_MEA",
+    "valid_TotW_AAC",
+    "valid_PhW_phsA_AAC",
+    "valid_PhW_phsB_AAC",
+    "valid_PhW_phsC_AAC",
+    "valid_TotVar_AAC",
+    "valid_PhVar_phsA_AAC",
+    "valid_PhVar_phsB_AAC",
+    "valid_PhVar_phsC_AAC",
+    "valid_ImbNg_TotW",
+    "valid_ImbNg_TotVar",
+    "valid_TotW_MEC",
+    "valid_TotVar_MEC",
+    "valid_TotW_MTS",
+    "valid_TotVar_MTS",
+    "measurement_mask",
+    "gap_indicator"
+  ]
+}

@@ -44,6 +44,8 @@ class Settings:
     inference_timeout_seconds: int
     auth_required: bool
     service_token: str | None
+    catalog_dir: Path | None = None
+    active_state_path: Path | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -82,4 +84,9 @@ class Settings:
             ),
             auth_required=auth_required,
             service_token=token,
+            catalog_dir=Path(os.environ["MODEL_CATALOG_DIR"]).expanduser().resolve()
+            if os.getenv("MODEL_CATALOG_DIR") else None,
+            active_state_path=Path(os.getenv(
+                "MODEL_ACTIVE_STATE_PATH", repository_root / ".local" / "model-runtime" / "active.json"
+            )).expanduser().resolve(),
         )

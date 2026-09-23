@@ -20,7 +20,7 @@ import org.mockito.ArgumentCaptor;
 
 class MqttTelemetryMessageProcessorTest {
     @Test
-    void fillsExactlyOneMissingMinuteFromAdjacentValues() throws Exception {
+    void preservesMissingMinuteForModelSpecificPreprocessing() throws Exception {
         MqttTelemetryMapper mapper = mock(MqttTelemetryMapper.class);
         IngestionService ingestion = mock(IngestionService.class);
         MeasurementRepository measurements = mock(MeasurementRepository.class);
@@ -41,12 +41,7 @@ class MqttTelemetryMessageProcessorTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<MainSwitchMinutePoint>> points = ArgumentCaptor.forClass(List.class);
         verify(ingestion).ingest(points.capture(), eq("request"));
-        assertThat(points.getValue()).hasSize(2);
-        MainSwitchMinutePoint filled = points.getValue().getFirst();
-        assertThat(filled.eventTime()).isEqualTo(OffsetDateTime.parse("2026-09-04T19:49:00+08:00"));
-        assertThat(filled.activePowerKw()).isEqualTo(-0.798);
-        assertThat(filled.phaseAPowerKw()).isEqualTo(-0.2335);
-        assertThat(filled.qualityFlag()).isEqualTo("good");
+        assertThat(points.getValue()).hasSize(1);
         assertThat(points.getValue().getLast()).isSameAs(current);
     }
 

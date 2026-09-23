@@ -74,10 +74,11 @@ public class FeedbackService {
                                 insert into pv_feedback_point (
                                   feedback_point_id, batch_id, station_id, node_id,
                                   event_time, period_end, arrival_time, pv_value,
-                                  value_type, capacity_kw, quality_flag, created_at
-                                ) values (:id, :batchId, :stationId, :nodeId, :eventTime,
-                                  :periodEnd, :arrivalTime, :value, :valueType, :capacity,
-                                  :quality, :now)
+                                  value_type, capacity_kw, quality_flag, created_at,
+                                  measurement_time, frame_time
+                        ) values (:id, :batchId, :stationId, :nodeId, :eventTime,
+                          :periodEnd, :arrivalTime, :value, :valueType, :capacity,
+                          :quality, :now, :measurementTime, :frameTime)
                                 on conflict (batch_id, node_id, event_time) do nothing
                                 """)
                         .param("id", UUID.randomUUID().toString()).param("batchId", request.batchId())
@@ -85,7 +86,9 @@ public class FeedbackService {
                         .param("eventTime", point.eventTime()).param("periodEnd", point.periodEnd())
                         .param("arrivalTime", request.arrivalTime()).param("value", point.pvValue())
                         .param("valueType", point.valueType()).param("capacity", point.capacityKw())
-                        .param("quality", point.qualityFlag()).param("now", OffsetDateTime.now()).update();
+                        .param("quality", point.qualityFlag()).param("now", OffsetDateTime.now())
+                        .param("measurementTime", point.measurementTime())
+                        .param("frameTime", point.frameTime()).update();
                 upsertNode(request.stationId(), point, request.arrivalTime());
             }
             int corrected = request.arrivalTime().isAfter(OffsetDateTime.now())

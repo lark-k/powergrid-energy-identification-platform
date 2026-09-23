@@ -70,9 +70,11 @@ SGCC-project/energy_device_detection/artifacts/data_inventory.csv
 SGCC-project/energy_device_detection/outputs/*
 !SGCC-project/energy_device_detection/outputs/selected_model.pt
 !SGCC-project/energy_device_detection/outputs/model_comparison.json
+!SGCC-project/energy_device_detection/outputs/tcn_checkpoint.pt
 SGCC-project/energy_device_detection/pv_outputs/*
 !SGCC-project/energy_device_detection/pv_outputs/selected_pv_model.pt
 !SGCC-project/energy_device_detection/pv_outputs/pv_model_comparison.json
+!SGCC-project/energy_device_detection/pv_outputs/causal_tcn_checkpoint.pt
 
 # IDE and OS metadata
 **/.idea/

@@ -6,6 +6,11 @@ import com.sgcc.powergrid.integration.modelservice.ModelServiceDtos.InferenceRes
 import java.time.Instant;
 import java.util.Optional;
 import java.util.List;
+import java.util.Map;
+import com.sgcc.powergrid.common.ApiException;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.RestClientResponseException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.http.HttpHeaders;
@@ -117,6 +122,38 @@ public class ModelServiceClient {
             return true;
         } catch (RestClientException exception) {
             return false;
+        }
+    }
+
+    public Map<String, Object> modelVersions() {
+        try {
+            var result = client.get().uri("/internal/v1/model-versions").retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            if (result == null) throw new IllegalStateException("empty model catalog");
+            return result;
+        } catch (RestClientException exception) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_CATALOG_UNAVAILABLE", "无法读取推理服务的模型版本");
+        }
+    }
+
+    public Map<String, Object> activateModel(String task, String version, String expectedVersion) {
+        try {
+            var result = client.post().uri("/internal/v1/model-versions/{task}/activate", task)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("model_version", version, "expected_version", expectedVersion))
+                    .retrieve().body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            if (result == null) throw new IllegalStateException("empty activation response");
+            return result;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 409) {
+                throw new ApiException(HttpStatus.CONFLICT, "MODEL_VERSION_CONFLICT", "当前模型已变化，请刷新版本列表后重试");
+            }
+            if (exception.getStatusCode().value() == 422) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "MODEL_INCOMPATIBLE", "模型未通过兼容性检查，未执行切换");
+            }
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_SWITCH_FAILED", "推理服务未确认切换成功，请刷新查看实际生效版本");
+        } catch (RestClientException exception) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_SWITCH_UNCONFIRMED", "切换响应未收到，请刷新查看实际生效版本后再操作");
         }
     }
 

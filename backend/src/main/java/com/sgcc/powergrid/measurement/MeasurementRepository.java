@@ -28,12 +28,13 @@ public class MeasurementRepository {
                           station_id, event_time, arrival_time, active_power_kw,
                           phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
                           reactive_power_kvar, voltage, current_ampere, power_factor,
-                          coverage_ratio, quality_flag, source_id, request_id, created_at
+                          coverage_ratio, quality_flag, source_id, request_id, created_at,
+                          electrical_fields_json, field_validity_json, measurement_time, frame_time
                         ) select
                           :stationId, :eventTime, :arrivalTime, :activePowerKw,
                           :phaseA, :phaseB, :phaseC, :reactivePowerKvar, :voltage,
                           :current, :pf, :coverageRatio, :qualityFlag, :sourceId,
-                          :requestId, :arrivalTime
+                          :requestId, :arrivalTime, :electrical, :validity, :measurementTime, :frameTime
                         where not exists (
                           select 1 from main_switch_minute
                           where station_id = :stationId and event_time = :eventTime
@@ -54,6 +55,10 @@ public class MeasurementRepository {
                 .param("qualityFlag", point.qualityFlag())
                 .param("sourceId", point.sourceId())
                 .param("requestId", requestId)
+                .param("electrical", ElectricalFields.json(point.electricalFields()))
+                .param("validity", ElectricalFields.json(new java.util.TreeMap<>(point.fieldValidity())))
+                .param("measurementTime", point.measurementTime())
+                .param("frameTime", point.frameTime())
                 .update();
     }
 
@@ -72,7 +77,10 @@ public class MeasurementRepository {
                           coverage_ratio = :coverageRatio,
                           quality_flag = :qualityFlag,
                           source_id = :sourceId,
-                          request_id = :requestId
+                          request_id = :requestId,
+                          electrical_fields_json = :electrical, field_validity_json = :validity,
+                          measurement_time = coalesce(:measurementTime, measurement_time),
+                          frame_time = coalesce(:frameTime, frame_time)
                         where station_id = :stationId and event_time = :eventTime
                           and (
                             active_power_kw is distinct from :activePowerKw or
@@ -85,7 +93,11 @@ public class MeasurementRepository {
                             power_factor is distinct from :pf or
                             coverage_ratio is distinct from :coverageRatio or
                             quality_flag is distinct from :qualityFlag or
-                            source_id is distinct from :sourceId
+                            source_id is distinct from :sourceId or
+                            electrical_fields_json is distinct from :electrical or
+                            field_validity_json is distinct from :validity or
+                            (:measurementTime is not null and measurement_time is distinct from :measurementTime) or
+                            (:frameTime is not null and frame_time is distinct from :frameTime)
                           )
                         """)
                 .param("stationId", point.stationId())
@@ -103,6 +115,10 @@ public class MeasurementRepository {
                 .param("qualityFlag", point.qualityFlag())
                 .param("sourceId", point.sourceId())
                 .param("requestId", requestId)
+                .param("electrical", ElectricalFields.json(point.electricalFields()))
+                .param("validity", ElectricalFields.json(new java.util.TreeMap<>(point.fieldValidity())))
+                .param("measurementTime", point.measurementTime())
+                .param("frameTime", point.frameTime())
                 .update();
     }
 
@@ -110,7 +126,7 @@ public class MeasurementRepository {
         List<Map<String, Object>> rows = jdbc.sql("""
                         select station_id, event_time, active_power_kw,
                                phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
-                               coverage_ratio, quality_flag, source_id
+                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
                         from main_switch_minute
                         where station_id = :stationId and event_time <= :targetTime
                           and event_time >= :windowStart
@@ -134,7 +150,7 @@ public class MeasurementRepository {
         return jdbc.sql("""
                         select station_id, event_time, active_power_kw,
                                phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
-                               coverage_ratio, quality_flag, source_id
+                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
                         from main_switch_minute
                         where station_id = :stationId
                           and event_time >= :fromInclusive
@@ -152,7 +168,7 @@ public class MeasurementRepository {
                         select station_id, event_time, active_power_kw,
                                phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
                                reactive_power_kvar, voltage, current_ampere, power_factor,
-                               coverage_ratio, quality_flag, source_id
+                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
                         from main_switch_minute
                         where station_id = :stationId and event_time < :eventTime
                         order by event_time desc limit 1
@@ -177,7 +193,8 @@ public class MeasurementRepository {
                 nullableNumber(row, "power_factor"),
                 number(row, "coverage_ratio"),
                 String.valueOf(row.get("quality_flag")),
-                String.valueOf(row.get("source_id"))));
+                String.valueOf(row.get("source_id")), ElectricalFields.values(row.get("electrical_fields_json")),
+                ElectricalFields.validity(row.get("field_validity_json"))));
     }
 
     public void incrementQuality(String stationId, int duplicates, int outOfOrder, int warnings) {

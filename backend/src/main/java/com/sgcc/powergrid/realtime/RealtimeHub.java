@@ -9,7 +9,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
@@ -74,6 +76,14 @@ public class RealtimeHub {
                 return true;
             }
         }));
+        sockets.forEach((stationId, stationSockets) -> stationSockets.removeIf(session -> {
+            try {
+                sendSocketMessage(session, new PingMessage());
+                return false;
+            } catch (IOException exception) {
+                return true;
+            }
+        }));
     }
 
     private void publishTelemetry(String stationId, String eventId) {
@@ -97,8 +107,7 @@ public class RealtimeHub {
             String json = objectMapper.writeValueAsString(event);
             stationSockets.removeIf(session -> {
                 try {
-                    if (!session.isOpen()) return true;
-                    session.sendMessage(new TextMessage(json));
+                    sendSocketMessage(session, new TextMessage(json));
                     return false;
                 } catch (IOException exception) {
                     return true;
@@ -106,6 +115,13 @@ public class RealtimeHub {
             });
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to serialize realtime event", exception);
+        }
+    }
+
+    private void sendSocketMessage(WebSocketSession session, WebSocketMessage<?> message) throws IOException {
+        synchronized (session) {
+            if (!session.isOpen()) throw new IOException("WebSocket session is closed");
+            session.sendMessage(message);
         }
     }
 }

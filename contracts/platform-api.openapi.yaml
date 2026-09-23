@@ -361,6 +361,14 @@ paths:
             schema: { type: object, additionalProperties: false, required: [status, completed_at] }
       responses:
         '200': { description: 训练运行已结束 }
+  /models/available:
+    get:
+      operationId: availableModelVersions
+      description: 从推理服务读取实际模型制品、生效版本、上一版本及账号管理权限。
+      responses:
+        '200':
+          description: 版本目录；active 与 previous 按任务索引，models 含制品状态、审批状态、manifest 和不兼容原因，can_manage 表示管理员权限。
+        '503': { description: 推理服务版本目录不可用 }
   /models:
     post:
       operationId: registerModel
@@ -377,12 +385,34 @@ paths:
     post:
       operationId: deployModel
       parameters: [{ name: version, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [active, candidate] }
+                expected_version: { type: string, description: active 切换必须提供的当前生效版本 }
       responses:
         '200': { description: 模型已部署为 active 或 candidate }
+        '409': { description: 未审批或当前版本已改变 }
+        '422': { description: 制品不兼容或缺少当前版本 }
+        '503': { description: 切换未得到确认，必须查询实际生效版本 }
   /models/{task}/rollback:
     post:
       operationId: rollbackModel
       parameters: [{ name: task, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_version]
+              properties:
+                expected_version: { type: string }
       responses:
         '200': { description: 已回滚到上一 active 版本 }
   /stream:
@@ -512,6 +542,15 @@ components:
         coverage_ratio: { type: number, minimum: 0, maximum: 1 }
         quality_flag: { type: string, enum: [good, warning, missing, out_of_order] }
         source_id: { type: string }
+        measurement_time: { type: [string, 'null'], format: date-time, description: Original MQTT item timestamp when available. }
+        frame_time: { type: [string, 'null'], format: date-time, description: Original MQTT frame send timestamp when available. }
+        electrical_fields:
+          type: object
+          description: Frozen 56-field main-meter whitelist in source units; absent fields are not synthesized.
+          additionalProperties: { type: [number, 'null'] }
+        field_validity:
+          type: object
+          additionalProperties: { type: boolean }
     RecognitionItem:
       type: object
       required: [kind, label, score, detected, features]
@@ -546,6 +585,10 @@ components:
         initial_pv_kw: { type: number, minimum: 0 }
         pv_activity_probability: { type: [number, 'null'], minimum: 0, maximum: 1 }
         interpolated_minutes: { type: integer, minimum: 0 }
+        max_consecutive_missing_minutes:
+          type: integer
+          minimum: 0
+          description: 结果前 240 分钟内连续缺测的总开分钟数最大值；界面达到 30 分钟才显示告警。
         corrected_pv_kw: { type: [number, 'null'], minimum: 0 }
         station_feedback_value: { type: [number, 'null'] }
         feedback_status: { type: string, enum: [已反馈, 等待回传] }
@@ -561,16 +604,19 @@ components:
         quality_status: { type: string }
     PvFeedbackPoint:
       type: object
-      required: [node_id, event_time, arrival_time, batch_id, pv_value, value_type, capacity_kw, quality_flag]
+      required: [node_id, period_start, period_end, arrival_time, batch_id, pv_value, value_type, capacity_kw, quality_flag]
       properties:
         node_id: { type: string }
-        event_time: { type: string, format: date-time }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
         arrival_time: { type: string, format: date-time }
         batch_id: { type: string }
         pv_value: { type: number }
         value_type: { type: string, enum: [average_power, energy] }
         capacity_kw: { type: number }
         quality_flag: { type: string }
+        measurement_time: { type: [string, 'null'], format: date-time, description: Original MQTT item timestamp when available. }
+        frame_time: { type: [string, 'null'], format: date-time, description: Original MQTT frame send timestamp when available. }
     FeedbackBatch:
       type: object
       required: [batch_id, arrival_time, coverage_start, coverage_end, interval_minutes, point_count, participant_nodes, missing_nodes, node_coverage_ratio, capacity_coverage_ratio, completeness_ratio, quality_flag]

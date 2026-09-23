@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import io
 import platform
 import sys
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -69,6 +70,7 @@ class TaskInference:
     interpolated_minutes: int
     values: dict[str, float | bool]
     model_version: str
+    warnings: list[str] = field(default_factory=list)
 
 
 class ModelRunner(ABC):
@@ -124,8 +126,11 @@ class CurrentSgccModelRunner(ModelRunner):
         models = importlib.import_module("models")
         pv_models = importlib.import_module("pv_disaggregation_models")
 
+        artifact = self.checkpoint_path.read_bytes()
+        self._trained_at = datetime.fromtimestamp(self.checkpoint_path.stat().st_mtime, tz=timezone.utc)
+        self._artifact_sha256 = hashlib.sha256(artifact).hexdigest()
         self._checkpoint = torch.load(
-            self.checkpoint_path,
+            io.BytesIO(artifact),
             map_location="cpu",
             weights_only=False,
         )
@@ -214,7 +219,7 @@ class CurrentSgccModelRunner(ModelRunner):
 
     @property
     def artifact_sha256(self) -> str:
-        return hashlib.sha256(self.checkpoint_path.read_bytes()).hexdigest()
+        return self._artifact_sha256
 
     @property
     def model_version(self) -> str:
@@ -238,9 +243,7 @@ class CurrentSgccModelRunner(ModelRunner):
                 "pv_power_gate": float(checkpoint["power_gate_threshold"]),
             }
             output_fields = ["pv_generation_kw", "pv_activity_probability"]
-        trained_at = datetime.fromtimestamp(
-            self.checkpoint_path.stat().st_mtime, tz=timezone.utc
-        )
+        trained_at = self._trained_at
         return ModelManifest(
             model_id=f"current-sgcc-{self.task.value}",
             task=self.task,
@@ -340,27 +343,20 @@ class CurrentSgccModelRunner(ModelRunner):
 
 class InferenceCoordinator:
     def __init__(self, settings: Settings) -> None:
+        from .formal_runner import load_runner
         self.settings = settings
-        self.recognition = CurrentSgccModelRunner(
+        self.recognition = load_runner(
             ModelTask.RESOURCE_IDENTIFICATION,
             settings.recognition_checkpoint,
             settings.sgcc_project_dir,
             settings.device,
         )
-        self.separation = CurrentSgccModelRunner(
+        self.separation = load_runner(
             ModelTask.PV_SEPARATION,
             settings.separation_checkpoint,
             settings.sgcc_project_dir,
             settings.device,
         )
-        if (
-            self.recognition.min_coverage_ratio != self.separation.min_coverage_ratio
-            or self.recognition.max_interpolation_gap_minutes
-            != self.separation.max_interpolation_gap_minutes
-        ):
-            raise ModelContractError(
-                "recognition and separation preprocessing quality policies do not match"
-            )
         self._interpolate = self.recognition._recognition_predict.interpolate_minute_gaps
         metrics.gauge("model_loaded", 1, {"task": self.recognition.task.value})
         metrics.gauge("model_loaded", 1, {"task": self.separation.task.value})
@@ -412,15 +408,18 @@ class InferenceCoordinator:
         unavailable: dict[ModelTask, WindowUnavailable] = {}
         try:
             source_frame, warnings = self._to_frame(request.points, request.target_time)
-            frame = self._interpolate(
-                source_frame,
-                min_coverage_ratio=self.recognition.min_coverage_ratio,
-                max_gap_minutes=self.recognition.max_interpolation_gap_minutes,
-            )
-            unfilled_minutes = int(frame.attrs["interpolation"]["unfilled_minutes"])
             for runner in (self.recognition, self.separation):
+                unfilled_minutes = 0
                 try:
-                    task_results[runner.task] = runner.infer(frame, request.target_time)
+                    if hasattr(runner, "infer_points"):
+                        result = runner.infer_points(request.points, request.target_time)
+                    else:
+                        frame = self._interpolate(source_frame.copy(), min_coverage_ratio=runner.min_coverage_ratio,
+                                                  max_gap_minutes=runner.max_interpolation_gap_minutes)
+                        unfilled_minutes = int(frame.attrs["interpolation"]["unfilled_minutes"])
+                        result = runner.infer(frame, request.target_time)
+                    task_results[runner.task] = result
+                    warnings.extend(result.warnings)
                 except WindowUnavailable as exc:
                     if exc.code == "insufficient_history" and unfilled_minutes > 0:
                         exc = WindowUnavailable(

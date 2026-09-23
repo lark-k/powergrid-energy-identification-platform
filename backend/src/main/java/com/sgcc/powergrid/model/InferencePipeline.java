@@ -3,6 +3,8 @@ package com.sgcc.powergrid.model;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sgcc.powergrid.common.JdbcValues;
+import com.sgcc.powergrid.measurement.ElectricalFields;
+import com.sgcc.powergrid.measurement.ElectricalFields;
 import com.sgcc.powergrid.integration.modelservice.ModelServiceClient;
 import com.sgcc.powergrid.integration.modelservice.ModelServiceDtos;
 import com.sgcc.powergrid.measurement.IngestionModels.MinutesIngestedEvent;
@@ -68,7 +70,8 @@ public class InferencePipeline {
                     number(row, "phase_c_power_kw"),
                     number(row, "coverage_ratio"),
                     String.valueOf(row.get("quality_flag")),
-                    String.valueOf(row.get("source_id")))).toList();
+                    String.valueOf(row.get("source_id")), ElectricalFields.values(row.get("electrical_fields_json")),
+                    ElectricalFields.validity(row.get("field_validity_json")))).toList();
             ModelServiceDtos.InferenceRequest inferenceRequest =
                     new ModelServiceDtos.InferenceRequest(requestId, stationId, modelTime(targetTime), points);
             ModelServiceDtos.InferenceResult result = modelService.infer(inferenceRequest);

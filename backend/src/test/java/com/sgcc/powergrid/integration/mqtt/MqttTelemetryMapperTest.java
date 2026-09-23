@@ -10,6 +10,18 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MqttTelemetryMapperTest {
+    @Test void preservesAll56FieldsAndMasksBadQualityOrWrongMinute() throws Exception {
+        var items = new java.util.ArrayList<java.util.Map<String, String>>();
+        for (String name : com.sgcc.powergrid.measurement.ElectricalFields.NAMES) {
+            items.add(java.util.Map.of("name", name, "val", "1.234567", "quality", name.equals("A_SCC") ? "1" : "0",
+                    "timestamp", name.equals("PhV_phsB") ? "2026-09-22T10:05:00+08:00" : "2026-09-22T10:00:00+08:00"));
+        }
+        byte[] payload = new ObjectMapper().writeValueAsBytes(java.util.Map.of("token", "full56", "datatype", "0",
+                "timestamp", "2026-09-22T10:01:00+08:00", "body", items));
+        var point = roleMapper(List.of("0004=A01:main_switch", "0001=A01:pv:-1")).map("topic/0004", payload).orElseThrow().point();
+        assertThat(point.electricalFields()).hasSize(55).containsEntry("TotW_MA", 1.234567);
+        assertThat(point.fieldValidity()).hasSize(56).containsEntry("A_SCC", false).containsEntry("PhV_phsB", false).containsEntry("TotW_MA", true);
+    }
     private static final String TOPIC =
             "PAnt/Broadcast/JSON/report/notification/PM201/202606050023";
 
@@ -39,7 +51,11 @@ class MqttTelemetryMapperTest {
         assertThat(value.requestId()).isEqualTo("mqtt-20260904121517491");
         assertThat(value.point().stationId()).isEqualTo("A01");
         assertThat(value.point().eventTime())
-                .isEqualTo(OffsetDateTime.parse("2026-09-04T12:15:00+08:00"));
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T12:14:00+08:00"));
+        assertThat(value.point().measurementTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T12:14:57.979+08:00"));
+        assertThat(value.point().frameTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T12:15:17.491+08:00"));
         assertThat(value.point().activePowerKw()).isEqualTo(-0.789214);
         assertThat(value.point().phaseAPowerKw()).isEqualTo(-0.235295);
         assertThat(value.point().phaseBPowerKw()).isEqualTo(-0.281486);
@@ -121,7 +137,7 @@ class MqttTelemetryMapperTest {
     }
 
     @Test
-    void keepsConsecutiveFrameMinutesDistinctWhenMeasurementTimestampsLag() throws Exception {
+    void usesTheMeasurementMinuteEvenWhenTheFrameIsLater() throws Exception {
         var first = mapper.map(TOPIC, payloadAt(
                 "20260904180518778",
                 "2026-09-04T18:05:18.227+0800",
@@ -132,13 +148,13 @@ class MqttTelemetryMapperTest {
                 "2026-09-04T18:06:01.120+0800"));
 
         assertThat(first.orElseThrow().point().eventTime())
-                .isEqualTo(OffsetDateTime.parse("2026-09-04T18:05:00+08:00"));
+                .isEqualTo(OffsetDateTime.parse("2026-09-04T18:04:00+08:00"));
         assertThat(second.orElseThrow().point().eventTime())
                 .isEqualTo(OffsetDateTime.parse("2026-09-04T18:06:00+08:00"));
     }
 
     @Test
-    void assignsDelayedFrameToNearestMeasurementMinute() throws Exception {
+    void assignsDelayedFrameToTheMeasurementMinute() throws Exception {
         var mapped = mapper.map(TOPIC, payloadAt(
                 "20260904195019071",
                 "2026-09-04T19:50:19.071+0800",
@@ -151,6 +167,20 @@ class MqttTelemetryMapperTest {
                 .isEqualTo(OffsetDateTime.parse("2026-09-04T19:49:21.055+08:00"));
         assertThat(value.frameTime())
                 .isEqualTo(OffsetDateTime.parse("2026-09-04T19:50:19.071+08:00"));
+    }
+
+    @Test
+    void keepsSamplesAfterSecondThirtyInTheirNaturalMinute() throws Exception {
+        var main = mapper.map(TOPIC, payloadAt("main-0051",
+                "2026-09-24T00:51:56+08:00", "2026-09-24T00:51:30.030+08:00")).orElseThrow();
+        assertThat(main.point().eventTime()).isEqualTo(OffsetDateTime.parse("2026-09-24T00:51:00+08:00"));
+
+        var pv = roleMapper(List.of("pv=A01:pv:-1")).map("topic/pv", payloadAt("pv-0057",
+                "2026-09-24T00:57:56+08:00", "2026-09-24T00:57:35.199+08:00")).orElseThrow();
+        assertThat(pv.feedback().points().getFirst().eventTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-24T00:57:00+08:00"));
+        assertThat(pv.feedback().points().getFirst().measurementTime())
+                .isEqualTo(OffsetDateTime.parse("2026-09-24T00:57:35.199+08:00"));
     }
 
     private static byte[] payload(String datatype, String requiredQuality, boolean includePhaseC) {

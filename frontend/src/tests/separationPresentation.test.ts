@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SeparationResult } from "../types/domain";
-import { separationConfidenceLabel, separationConfidenceValue, separationQualityText } from "../utils/separation";
+import { separationConfidenceLabel, separationConfidenceValue, separationHasAlert, separationQualityText } from "../utils/separation";
 
 const result = {
   corrected_pv_kw: null,
@@ -19,6 +19,16 @@ describe("separation result presentation", () => {
 
   it("surfaces interpolated input minutes as a quality warning", () => {
     expect(separationQualityText(result)).toBe("告警 · 输入插值 24 分钟");
+  });
+
+  it("alerts only when the longest missing main-meter run reaches 30 minutes", () => {
+    const shortGap = { ...result, max_consecutive_missing_minutes: 29 };
+    expect(separationHasAlert(shortGap)).toBe(false);
+    expect(separationQualityText(shortGap)).toBe("短时缺测 29 分钟 · 未达告警阈值");
+
+    const sustainedGap = { ...result, max_consecutive_missing_minutes: 30 };
+    expect(separationHasAlert(sustainedGap)).toBe(true);
+    expect(separationQualityText(sustainedGap)).toBe("告警 · 总开连续缺测 30 分钟");
   });
 
   it("uses correction confidence only after feedback correction", () => {

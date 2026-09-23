@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "minute_online_inference": "PASS",
+  "replay_ingested_minutes": 41261,
+  "replay_checked_predictions": 1504,
+  "replay_scope": "all held-out timelines ingested; deterministic stratified endpoint outputs checked",
+  "causal_output_check": "PASS",
+  "gap_0015": "PASS",
+  "ev_only_gradient_mask": "PASS",
+  "auxiliary_date_partition": "PASS",
+  "original_files_unchanged": 1508,
+  "closed_minute": "00:15 features available at 00:16; no 120/240-minute warmup wait"
+}

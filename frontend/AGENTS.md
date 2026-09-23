@@ -10,6 +10,13 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Project-specific design decisions
 
+- For minute-level display alerts, show a model input quality alarm only when main-switch data is missing for at least 30 consecutive minutes within the 240-minute PV window. Keep isolated/short gaps visible as detail without the alarm badge; a minute with no main-switch measurement remains explicitly marked missing. Preserve the raw model quality status in the API for diagnostics.
+
+- In model application management, emphasize the actual active archive rows with a green edge, tinted background and explicit status badge. Show completion dates (YYYY-MM-DD) in version options and sort both options and archives newest first by recorded completion time; missing dates go last and must not use artifact modification times as training dates.
+
+- Model application management must support real runtime version selection independently for resource identification and PV separation. Show the inference service's active version, require explicit activation after selection, preserve historical result versions, and expose rollback; training archive selection alone must never imply a successful runtime switch.
+- Switching a task's active model must synchronize its training, validation, input shape, metrics and curves with that exact version. Never fall back to another version's archive; show a missing-record state instead. Formal-v1 completion date is user-assigned 2026-09-22 and must be labeled as manually specified. PV formal-v1 metrics describe constructed data, not verified live accuracy.
+
 - The homepage toolbar ends with an icon-only fullscreen toggle at the far right. Use expand/contract icons for entering/exiting fullscreen; keep Chinese action text in accessible labels and hover titles only.
 
 - The latest approved whole-page reference is `../docs/design-qa/glass-upgrade/harmonized-reference.png`. It supersedes the earlier bright glass material: use deep navy smoked glass, subdued thin edges, small upper reflections, 13–14px card radii and restrained curve bloom. Apply the same material to the toolbar, four mini charts, minute ledger and all four chart detail windows. Keep the entire left energy-flow region unchanged, including content, layout, assets, animation and styles. Preserve the previous detail window structure and all data/interaction behavior.
@@ -33,5 +40,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - The expected transient `connecting` state while switching from replay back to real time must remain visible only in the compact connection status; it must not trigger the red business-chain failure alert unless an actual request error exists.
 - In both live mode and simulated replay, hovering a detail-chart point must freeze only that chart's rendered data/time-axis snapshot while ingestion and the rest of the page continue updating. The exact `event_time`, curve point, crosshair, and pointer-relative tooltip must stay aligned; after pointer leave, apply the newest queued chart option and resume following the mode's latest data.
 - User-visible power values must retain at least three decimal places; do not round normal kW values to whole numbers. Values below 0.01 kW may retain a fourth decimal place.
-- Never present PV activity probability as power-estimate accuracy. Show its explicit label, and surface model-window interpolation counts as an input-data quality warning.
+- Never present PV activity probability as power-estimate accuracy. Show its explicit label, and surface model-window interpolation counts as input-data quality detail without an alarm unless the 30-minute continuous-missing threshold is met.
 - A manually locked minute detail must survive automatic realtime window movement; clear it only when the station changes or the user explicitly unlocks it.

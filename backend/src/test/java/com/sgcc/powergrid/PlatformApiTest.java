@@ -216,6 +216,45 @@ class PlatformApiTest {
     }
 
     @Test
+    @org.springframework.transaction.annotation.Transactional
+    void separationReportsLongestContinuousMainMeterGapAtThirtyMinuteBoundary() throws Exception {
+        OffsetDateTime target = OffsetDateTime.parse("2051-01-02T12:00:00+08:00");
+        for (int offset = 0; offset < 240; offset++) {
+            if ((offset >= 80 && offset <= 108) || (offset >= 150 && offset <= 178)) continue;
+            OffsetDateTime at = target.minusMinutes(offset);
+            jdbc.sql("""
+                    insert into main_switch_minute (
+                      station_id, event_time, arrival_time, active_power_kw,
+                      phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
+                      coverage_ratio, quality_flag, source_id, request_id, created_at)
+                    values ('A01', :at, :at, 1, 0.3, 0.3, 0.4, 1, 'good', 'test-meter', 'gap-test', :at)
+                    """).param("at", at).update();
+        }
+        jdbc.sql("""
+                insert into pv_separation_result (
+                  separation_id, station_id, event_time, separation_time, input_window_start,
+                  input_window_end, interpolated_minutes, quality_status, total_power_kw,
+                  initial_pv_kw, pv_activity_probability, model_version, model_summary,
+                  deployment_role, request_id, created_at, updated_at)
+                values (:id, 'A01', :target, :target, :start, :target,
+                  0, 'warning', 1, 0.1, 0.5, 'gap-test', '{}', 'active', 'gap-test', :target, :target)
+                """).param("id", UUID.randomUUID().toString())
+                .param("target", target).param("start", target.minusMinutes(239)).update();
+
+        mvc.perform(get("/api/v1/stations/A01/snapshot")
+                        .param("at", target.plusMinutes(1).toString()).param("range", "1h"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.separation_results[0].max_consecutive_missing_minutes").value(29));
+
+        jdbc.sql("delete from main_switch_minute where station_id = 'A01' and event_time = :at")
+                .param("at", target.minusMinutes(109)).update();
+        mvc.perform(get("/api/v1/stations/A01/snapshot")
+                        .param("at", target.plusMinutes(1).toString()).param("range", "1h"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.separation_results[0].max_consecutive_missing_minutes").value(30));
+    }
+
+    @Test
     void historicalSnapshotDoesNotLeakFutureRecognition() throws Exception {
         OffsetDateTime past = OffsetDateTime.parse("2039-01-01T10:00:00+08:00");
         OffsetDateTime future = OffsetDateTime.parse("2041-01-01T10:00:00+08:00");

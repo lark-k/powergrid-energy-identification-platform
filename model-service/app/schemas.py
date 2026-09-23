@@ -40,6 +40,8 @@ class MinutePoint(StrictModel):
     coverage_ratio: float = Field(ge=0, le=1)
     quality_flag: QualityFlag
     source_id: str = Field(min_length=1, max_length=128)
+    electrical_fields: dict[str, float | None] = Field(default_factory=dict)
+    field_validity: dict[str, bool] = Field(default_factory=dict)
 
     @field_validator("event_time")
     @classmethod

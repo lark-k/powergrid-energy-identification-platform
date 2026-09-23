@@ -1,12 +1,38 @@
 # 模型替换、切换与回滚
 
+## 前端在线切换
+
+在“模型应用管理”中，资源辨识与光伏分离分别列出推理服务实际发现的制品。管理员选择版本后，先“批准此版本”，再“切换到此版本”；已批准版本可直接切换，也可“回退上一版本”。选择下拉框本身不改变模型。普通账号只能查看。
+
+可选版本来自当前 checkpoint、`outputs/*_checkpoint.pt`、`pv_outputs/*_checkpoint.pt`，以及可选 `MODEL_CATALOG_DIR` 下的 `resource_identification/*.pt` 和 `pv_separation/*.pt`。目录由服务器管理员维护，只放可信完整制品，禁止直接接受匿名上传的 pickle/checkpoint。缺少配套清单、归一化或输入适配的裸权重会标为不兼容。已内置 formal-v1 的 114 通道适配和配套制品。
+
+服务先验证契约、权重和前向输出；未注册版本在批准时从服务读取真实摘要，已单独注册的影子候选模型仍可独立审批。正式切换时再次校验注册摘要与运行制品。切换请求必须带 `expected_version`；其他管理员已经切换时返回 409，要求刷新。服务先原子保存选择，再交换完整模型组合。执行中的请求保留原组合，后续请求使用新组合；批量回放在一次请求内固定版本。切换作用于此服务的所有台区，不改写已保存的历史结果。批准和部署记录保存在数据库；页面“当前生效”以推理服务状态为准，不以训练归档或上一条推理结果推断。
+
+`MODEL_ACTIVE_STATE_PATH` 默认位于项目 `.local/model-runtime/active.json`。Docker 使用 `model-runtime` 持久卷保存选择和附加制品。重启时会恢复选择；如果所选制品丢失或不兼容，服务进入未就绪状态，不静默回退。保留历次制品才能保证重启后可回滚。本实现要求一个 Uvicorn worker、一个 active 模型服务实例；不能通过增加 worker/副本共享本地状态文件实现集群切换。
+
+新接口：`GET /api/v1/models/available` 返回 `active`、`previous`、`models` 与当前账号的 `can_manage`；批准仍使用 `POST /api/v1/models/{version}/approve`；部署请求为 `{"role":"active","expected_version":"当前版本"}`；回滚请求为 `{"expected_version":"当前版本"}`。模型服务内部提供 `GET /internal/v1/model-versions` 和 `POST /internal/v1/model-versions/{task}/activate`（`model_version`、`expected_version`），沿用服务鉴权。
+
+加载或保存失败不替换当前模型。网络超时不能被当作“确定没有切换”，页面会提示刷新核实实际状态。部署数据库事务回滚时尝试用版本条件恢复原模型；如果补偿失败，日志记录需核对状态的错误，实际版本仍从推理服务查询。
+
+## 不同输入契约的模型替换
+
 1. 将 checkpoint、归一化参数、阈值、预处理定义、输入/输出 Schema 和 manifest 打成不可分割制品，计算 SHA-256。
 2. 实现新的 `ModelRunner`，保持 `manifest()`、`infer(points)`、`health()`；不得修改平台业务契约。
 3. 注册为 `candidate`，readiness 必须验证摘要与预处理契约。摘要不匹配时禁止加载。
 4. 将 candidate runner 部署为第二个模型服务实例，设置 `MODEL_SHADOW_ENABLED=true` 和 `MODEL_CANDIDATE_SERVICE_BASE_URL`。Java 会对同一原始窗口调用 active/candidate；candidate 失败不影响 active 结果，并自动写入 `shadow_inference_comparison` 的概率与光伏功率差异。
-5. 人工审批后将 candidate 切为 active。每条业务结果继续保存其真实 `model_version`、窗口和摘要。
+5. 人工审批后将 candidate 切为 active。使用页面在线切换前，必须先在 active 服务中实现相应输入适配，并使其目录中的该制品通过兼容性检查；单独部署 candidate 实例不会自动满足此条件。每条业务结果继续保存其真实 `model_version`、窗口和摘要。
 6. 异常时调用回滚操作恢复上一 active 部署；历史结果不覆写，只对后续推理生效。
 
 不得只替换 `.pt` 后沿用不匹配的归一化或阈值。当前 `CurrentSgccModelRunner` 的辨识窗口为 120 分钟、光伏分离窗口为 240 分钟；替换 SGCC 实现时 Java 和前端接口不变。
 
 当前限制：只有光伏有数值分离；能源站和充电桩只有概率/状态；当前充电桩数据未完成与其他资源的真实同步混合验证；跨台区正式发布前必须完成外部测试。
+
+## 2026-09-22 formal-v1 接入
+
+Docker 默认模型为资源辨识 `sgcc-identification-f291cfb7f4fc` 与光伏分离 `sgcc-pv-separation-646637f18f09`。已有持久选择优先，升级时通过管理接口确认或切换；旧模型仍可选。两类任务使用各自独立预处理，支持新旧版本混用。
+
+仅 0004 总开字段进入推理，0001 仅用于光伏反馈。MQTT 保留56个白名单字段及逐字段质量/时间对齐掩码，落库并传递到在线和回放接口。停止在入库时将缺失分钟伪装为高质量插值记录；旧模型按原规则插值，新模型使用 median/IQR、截断、缺失归一化零值及掩码。午夜00:00—00:14屏蔽，00:15可恢复输出；输入为已闭合分钟。已有仅4个有功字段的历史记录不补造其余字段，新模型返回该任务不可用。
+
+V5迁移导入与模型摘要匹配的真实训练归档：资源主训练18轮（另存3轮辅助预训练）、光伏42轮，包含各划分指标、样本数和训练耗时。完成日期由用户指定为2026-09-22；`source_record.completion_time_source=user_assigned_date`，没有推造开始时间或逐轮时间戳。归档来源和摘要保存在 `model-service/artifacts/formal-v1/training/`，可通过 `scripts/import_formal_archive.py` 重现导入准备过程，不得修改已应用的迁移。
+
+训练/验证页只展示实际生效版本的归档；切换后立即更新共用版本状态并刷新归档，其他会话每5秒核对版本。无对应归档时显示缺失，不借用旧版本曲线。首页当前版本来自模型服务，历史推理仍保留原模型版本。PV指标为全构造数据评估，不代表真实在线精度；资源标签是运行代理。现场验收在页面保留待验证状态。

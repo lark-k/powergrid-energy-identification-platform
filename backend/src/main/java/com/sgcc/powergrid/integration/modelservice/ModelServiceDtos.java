@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class ModelServiceDtos {
     private ModelServiceDtos() {}
@@ -20,7 +21,16 @@ public final class ModelServiceDtos {
             @JsonProperty("phase_c_power_kw") double phaseCPowerKw,
             double coverageRatio,
             String qualityFlag,
-            String sourceId) {}
+            String sourceId,
+            Map<String, Double> electricalFields,
+            Map<String, Boolean> fieldValidity) {
+        public MinutePoint(String stationId, OffsetDateTime eventTime, double activePowerKw,
+                double phaseAPowerKw, double phaseBPowerKw, double phaseCPowerKw,
+                double coverageRatio, String qualityFlag, String sourceId) {
+            this(stationId, eventTime, activePowerKw, phaseAPowerKw, phaseBPowerKw, phaseCPowerKw,
+                    coverageRatio, qualityFlag, sourceId, Map.of(), Map.of());
+        }
+    }
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record InferenceRequest(

@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ModelRegistryController {
     private final ModelRegistryService service;
     public ModelRegistryController(ModelRegistryService service) { this.service = service; }
+
+    @GetMapping("/available")
+    @PreAuthorize("isAuthenticated()")
+    public Map<String, Object> available(Authentication actor) {
+        var catalog = new java.util.LinkedHashMap<>(service.available());
+        catalog.put("can_manage", actor.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
+        return catalog;
+    }
 
     @PostMapping
     public Map<String, Object> register(@RequestBody RegisterRequest request, Authentication actor) {
@@ -35,13 +44,13 @@ public class ModelRegistryController {
 
     @PostMapping("/{version}/deploy")
     public Map<String, Object> deploy(@PathVariable String version, @RequestBody DeployRequest request, Authentication actor) {
-        service.deploy(version, request.role(), actor.getName());
+        service.deploy(version, request.role(), actor.getName(), request.expectedVersion());
         return Map.of("model_version", version, "role", request.role(), "status", "deployed");
     }
 
     @PostMapping("/{task}/rollback")
-    public Map<String, Object> rollback(@PathVariable String task, Authentication actor) {
-        return Map.of("task", task, "model_version", service.rollback(task, actor.getName()), "status", "rolled_back");
+    public Map<String, Object> rollback(@PathVariable String task, @RequestBody ModelRegistryService.RollbackRequest request, Authentication actor) {
+        return Map.of("task", task, "model_version", service.rollback(task, actor.getName(), request.expectedVersion()), "status", "rolled_back");
     }
 
     @PostMapping("/shadow-comparisons")

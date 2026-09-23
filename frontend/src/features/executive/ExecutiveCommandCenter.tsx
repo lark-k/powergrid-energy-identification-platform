@@ -77,6 +77,11 @@ export function ExecutiveCommandCenter() {
   };
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const refresh = () => void useDemoStore.getState().refreshModelStatus();
+    window.addEventListener("model-runtime-changed", refresh);
+    return () => window.removeEventListener("model-runtime-changed", refresh);
+  }, []);
   useEffect(() => viewMode === "live" ? connect() : undefined, [connect, stationId, viewMode]);
   useEffect(() => {
     const timer = window.setInterval(() => void advance(), SYSTEM_CONFIG.demoTickMs);

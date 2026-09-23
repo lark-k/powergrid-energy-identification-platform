@@ -33,6 +33,32 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /internal/v1/model-versions:
+    get:
+      operationId: runtimeModelVersions
+      responses:
+        '200': { description: active、previous 按任务索引；models 为服务器已发现制品及兼容性检查结果 }
+  /internal/v1/model-versions/{task}/activate:
+    post:
+      operationId: activateRuntimeModel
+      parameters:
+        - $ref: '#/components/parameters/Task'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [model_version, expected_version]
+              properties:
+                model_version: { type: string }
+                expected_version: { type: string }
+      responses:
+        '200': { description: 持久保存并切换成功，返回实时版本目录 }
+        '409': { description: 生效版本与预期不一致 }
+        '422': { description: 未知、不兼容或任务不匹配的制品 }
+        '503': { description: 未配置可写的状态存储或保存失败 }
   /internal/v1/models:
     get:
       operationId: listModelManifests
@@ -156,6 +182,14 @@ components:
           type: string
           enum: [good, warning, missing, out_of_order]
         source_id: { type: string, minLength: 1, maxLength: 128 }
+        electrical_fields:
+          type: object
+          description: Measured main-meter electrical fields; formal-v1 consumes the frozen 56-field whitelist. Missing fields stay absent, never inferred from legacy power values.
+          additionalProperties: { type: [number, 'null'] }
+        field_validity:
+          type: object
+          description: Per-field measurement quality and minute alignment. False means masked input.
+          additionalProperties: { type: boolean }
     InferenceRequest:
       type: object
       additionalProperties: false

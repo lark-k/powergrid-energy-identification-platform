@@ -103,4 +103,48 @@ describe("MinuteLedger detail lock", () => {
     />);
     expect(screen.queryByRole("button", { name: /详情已锁定/ })).not.toBeInTheDocument();
   });
+
+  it("shows measured and feedback-only minutes without inventing a model result", () => {
+    const onSelect = vi.fn();
+    const raw = snapshot();
+    raw.separation_results = [];
+    raw.minute_points = [{
+      ...raw.minute_points[0], event_time: "2026-09-04T18:36:00+08:00",
+      active_power_kw: 1.181, measurement_time: "2026-09-04T18:36:30+08:00",
+    }];
+    raw.substation_points = [{
+      node_id: "pv", period_start: "2026-09-04T18:37:00+08:00",
+      period_end: "2026-09-04T18:38:00+08:00", arrival_time: "2026-09-04T18:37:50+08:00",
+      batch_id: "feedback", pv_value: 0.0013, value_type: "average_power", capacity_kw: 0,
+      quality_flag: "good", measurement_time: "2026-09-04T18:37:35+08:00",
+    }];
+    render(<MinuteLedger snapshot={raw} selection={{
+      start: new Date("2026-09-04T18:30:00+08:00").getTime(),
+      end: new Date("2026-09-04T18:39:00+08:00").getTime(),
+    }} selected={null} onSelect={onSelect} />);
+
+    const mainRow = screen.getByRole("button", { name: /18:36/ });
+    expect(mainRow).toHaveTextContent("1.181 kW");
+    expect(mainRow).toHaveTextContent("未生成模型结果");
+    const feedbackRow = screen.getByRole("button", { name: /18:37/ });
+    expect(feedbackRow).toHaveTextContent("缺测");
+    expect(feedbackRow).toHaveTextContent("0.0013 kW");
+    fireEvent.click(feedbackRow);
+    expect(screen.getByText("仅反馈 · 缺总开 · 告警", { selector: ".minute-detail .status" })).toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("marks a minute with no source measurement as missing", () => {
+    const raw = snapshot();
+    raw.separation_results = [];
+    raw.minute_points = [
+      { ...raw.minute_points[0], event_time: "2026-09-04T18:36:00+08:00" },
+      { ...raw.minute_points[0], event_time: "2026-09-04T18:38:00+08:00" },
+    ];
+    render(<MinuteLedger snapshot={raw} selection={{
+      start: new Date("2026-09-04T18:30:00+08:00").getTime(),
+      end: new Date("2026-09-04T18:39:00+08:00").getTime(),
+    }} selected={null} onSelect={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /18:37/ })).toHaveTextContent("全部缺测");
+  });
 });

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sgcc.powergrid.feedback.FeedbackModels.BatchRequest;
 import com.sgcc.powergrid.feedback.FeedbackModels.Point;
 import com.sgcc.powergrid.measurement.MainSwitchMinutePoint;
+import com.sgcc.powergrid.measurement.ElectricalFields;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -72,15 +73,14 @@ public class MqttTelemetryMapper {
         List<Item> required = requiredNames.stream().map(name -> required(items, name)).toList();
         OffsetDateTime frameTime = parseTimestamp(notification.timestamp());
         OffsetDateTime dataTime = parseTimestamp(required.getFirst().timestamp());
-        OffsetDateTime dataMinute = nearestMinute(dataTime);
+        OffsetDateTime dataMinute = minute(dataTime);
         for (Item item : required) {
-            if (!dataMinute.isEqual(nearestMinute(parseTimestamp(item.timestamp())))) {
+            if (!dataMinute.isEqual(minute(parseTimestamp(item.timestamp())))) {
                 throw new IllegalArgumentException("Required MQTT power fields span multiple minutes");
             }
         }
-        // The protocol defines the frame timestamp as the send time and the item timestamp as the
-        // measurement time. Samples can arrive shortly before or after a minute boundary, so map
-        // the measurement time to the nearest minute instead of flooring it or using the send time.
+        // The frame timestamp is send time. The item timestamp is measurement time; event_time
+        // identifies the natural minute containing that measurement, even after second 30.
         OffsetDateTime eventTime = dataMinute;
         String qualityFlag = required.stream().allMatch(item -> "0".equals(item.quality()))
                 ? "good" : "warning";
@@ -94,9 +94,25 @@ public class MqttTelemetryMapper {
                     eventTime, eventTime.plusMinutes(1), 1, List.of(deviceId), List.of(),
                     1, 0, 1, qualityFlag,
                     List.of(new Point(deviceId, eventTime, eventTime.plusMinutes(1),
-                            pvKw, "average_power", 0, qualityFlag)));
+                            pvKw, "average_power", 0, qualityFlag, dataTime, frameTime)));
             return Optional.of(new MappedMinute(deviceId, requestId(notification, payload),
                     frameTime, dataTime, null, feedback));
+        }
+        Map<String, Double> electrical = new LinkedHashMap<>();
+        Map<String, Boolean> validity = new LinkedHashMap<>();
+        for (String name : ElectricalFields.NAMES) {
+            Item item = items.get(name);
+            boolean valid = false;
+            try {
+                if (item != null && item.timestamp() != null && dataMinute.isEqual(minute(parseTimestamp(item.timestamp())))) {
+                    Double number = optionalValue(item);
+                    if (number != null) {
+                        electrical.put(name, number);
+                        valid = "0".equals(item.quality());
+                    }
+                }
+            } catch (IllegalArgumentException ignored) { /* Missing/invalid optional fields are masked, never fabricated. */ }
+            validity.put(name, valid);
         }
         MainSwitchMinutePoint point = new MainSwitchMinutePoint(
                 stationId,
@@ -111,7 +127,7 @@ public class MqttTelemetryMapper {
                 optionalValue(items.get("TotPF_AA")),
                 1.0,
                 qualityFlag,
-                "mqtt:" + deviceId);
+                "mqtt:" + deviceId, electrical, validity, dataTime, frameTime);
         return Optional.of(new MappedMinute(
                 deviceId, requestId(notification, payload), frameTime, dataTime, point));
     }
@@ -165,10 +181,6 @@ public class MqttTelemetryMapper {
 
     private static OffsetDateTime minute(OffsetDateTime value) {
         return value.withSecond(0).withNano(0);
-    }
-
-    private static OffsetDateTime nearestMinute(OffsetDateTime value) {
-        return minute(value.plusSeconds(30));
     }
 
     private static String requestId(Notification notification, byte[] payload) {

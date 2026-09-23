@@ -14,7 +14,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from .config import Settings
 from .metrics import metrics
-from .runner import InferenceCoordinator
+from .model_versions import ModelVersions, ModelSwitchError
+from .schemas import StrictModel
 from .schemas import (
     BatchInferenceRequest,
     ErrorResponse,
@@ -40,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.coordinator = None
     app.state.load_error = None
     try:
-        app.state.coordinator = InferenceCoordinator(settings)
+        app.state.coordinator = ModelVersions(settings)
         LOGGER.info(json.dumps({"event": "models_loaded", "status": "ready"}))
     except Exception as exc:
         app.state.load_error = str(exc)
@@ -151,8 +152,8 @@ def require_service_auth(
 ServiceAuth = Annotated[None, Depends(require_service_auth)]
 
 
-def coordinator(request: Request) -> InferenceCoordinator:
-    instance: InferenceCoordinator | None = request.app.state.coordinator
+def coordinator(request: Request) -> ModelVersions:
+    instance: ModelVersions | None = request.app.state.coordinator
     if instance is None:
         raise HTTPException(
             status_code=503,
@@ -176,7 +177,7 @@ def live(request: Request) -> HealthResponse:
     responses={503: {"model": ErrorResponse}},
 )
 def ready(request: Request) -> HealthResponse:
-    instance: InferenceCoordinator | None = request.app.state.coordinator
+    instance: ModelVersions | None = request.app.state.coordinator
     if instance is None:
         raise HTTPException(
             status_code=503,
@@ -208,13 +209,31 @@ def get_manifest(task: ModelTask, request: Request, _: ServiceAuth) -> ModelMani
     return coordinator(request).manifest(task)
 
 
+class ActivateModelRequest(StrictModel):
+    model_version: str
+    expected_version: str
+
+
+@app.get("/internal/v1/model-versions")
+def model_versions(request: Request, _: ServiceAuth) -> dict:
+    return coordinator(request).catalog()
+
+
+@app.post("/internal/v1/model-versions/{task}/activate")
+def activate_model(task: ModelTask, body: ActivateModelRequest, request: Request, _: ServiceAuth) -> dict:
+    try:
+        return coordinator(request).activate(task, body.model_version, body.expected_version)
+    except ModelSwitchError as exc:
+        raise HTTPException(status_code=exc.status, detail={"code": exc.code, "message": str(exc)}) from exc
+
+
 @app.post("/internal/v1/inference/minute", response_model=InferenceResult)
 def infer_minute(body: InferenceRequest, request: Request, _: ServiceAuth) -> InferenceResult:
     return coordinator(request).infer(body)
 
 
 def _infer_targets(body: BatchInferenceRequest, request: Request) -> list[InferenceResult]:
-    service = coordinator(request)
+    service = coordinator(request).snapshot()
     return [
         service.infer(
             InferenceRequest(

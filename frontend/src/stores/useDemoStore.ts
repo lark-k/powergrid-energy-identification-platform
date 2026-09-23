@@ -12,6 +12,7 @@ interface DemoState {
   drawerOpen: boolean; drawerTab: "minutes" | "feedback" | "nodes" | "corrections";
   settingsOpen: boolean; guideOpen: boolean; busy: boolean; historyAdvancing: boolean; toast: string | null; settings: SettingsState;
   load: () => Promise<void>; advance: () => Promise<void>; connect: () => () => void;
+  refreshModelStatus: () => Promise<void>;
   setStation: (stationId: string) => Promise<void>; setRange: (range: TimeRange) => Promise<void>;
   setHistoryAt: (at: string, startAt?: string) => Promise<void>; goLive: () => Promise<void>;
   selectResult: (result: SeparationResult) => void; setDrawer: (open: boolean, tab?: DemoState["drawerTab"]) => void;
@@ -98,6 +99,16 @@ export const useDemoStore = create<DemoState>((set, get) => ({
       const apiError = asApiError(error);
       set({ error: apiError, connection: apiError.status === 503 ? "degraded" : "offline" });
     }
+  },
+  refreshModelStatus: async () => {
+    const state = get();
+    try {
+      const at = state.viewMode === "history" && state.historyCursor ? new Date(state.historyCursor) : new Date();
+      const updated = await stationAdapter.getSnapshot(state.stationId, at, state.range);
+      const current = get();
+      if (current.stationId !== state.stationId || !current.snapshot) return;
+      set({ snapshot: { ...current.snapshot, model_health: updated.model_health, training: updated.training } });
+    } catch (error) { set({ error: asApiError(error) }); }
   },
   advance: async () => {
     const state = get();

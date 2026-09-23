@@ -1,0 +1,228 @@
+{
+  "assignments": [
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-25",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-26",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-27",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-28",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-29",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-11-30",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-12-01",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_01",
+      "date": "2025-12-02",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-04",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-05",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-06",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-07",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-08",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-09",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-10",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-11",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_02",
+      "date": "2025-12-12",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-09",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-10",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-11",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-12",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-13",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-14",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-15",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-16",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-17",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-18",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-19",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_03",
+      "date": "2026-01-20",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-01-30",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-01-31",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-01",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-02",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-03",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-04",
+      "split": "train"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-05",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-06",
+      "split": "validation"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-07",
+      "split": "buffer"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-08",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_04",
+      "date": "2026-02-09",
+      "split": "internal_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-11",
+      "split": "domain_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-12",
+      "split": "domain_test"
+    },
+    {
+      "batch_id": "batch_05",
+      "date": "2026-02-13",
+      "split": "domain_test"
+    }
+  ],
+  "excluded_shared_dates": [
+    "2025-12-03",
+    "2026-02-10"
+  ],
+  "buffer_minutes": 1440,
+  "maximum_history_minutes": 240,
+  "split_before_windows": true,
+  "synthetic_donors": "same TRAIN calendar date only",
+  "domain_test_status": "previously inspected development domain, NOT untouched external"
+}

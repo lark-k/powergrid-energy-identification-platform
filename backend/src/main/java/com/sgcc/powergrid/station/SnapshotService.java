@@ -4,15 +4,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sgcc.powergrid.common.ApiException;
+import com.sgcc.powergrid.common.JdbcValues;
 import com.sgcc.powergrid.common.PagedResponse;
 import com.sgcc.powergrid.model.ModelRuntimeState;
 import com.sgcc.powergrid.integration.modelservice.ModelServiceClient;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -234,7 +237,17 @@ public class SnapshotService {
 
     public Map<String, Object> latestTraining(String stationId) {
         List<Map<String, Object>> runs = trainingRuns(stationId);
-        return runs.isEmpty() ? null : runs.getFirst();
+        Map<String, String> active = activeVersions();
+        return runs.stream().filter(run -> run.get("model_version").equals(active.get(String.valueOf(run.get("model_task")))))
+                .findFirst().orElse(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> activeVersions() {
+        try {
+            Object active = modelService.modelVersions().get("active");
+            return active instanceof Map ? (Map<String, String>) active : Map.of();
+        } catch (Exception unavailable) { return Map.of(); }
     }
 
     public List<Map<String, Object>> trainingRuns(String stationId) {
@@ -245,7 +258,7 @@ public class SnapshotService {
                                started_at, completed_at, validation_score,
                                metric_name, metric_value, validation_series_name, source_record
                         from training_run where station_id = :stationId or station_id is null
-                        order by started_at desc
+                        order by completed_at desc, started_at desc
                         """)
                 .param("stationId", stationId).query().listOfRows();
         return runs.stream().map(this::trainingRunDetails).toList();
@@ -275,6 +288,20 @@ public class SnapshotService {
                         releaseCheck("quality", "数据质量检查"),
                         releaseCheck("classification", "多标签分类验证"),
                         releaseCheck("threshold", "识别阈值标定")));
+        try {
+            Map<String, Object> source = objectMapper.readValue(String.valueOf(run.get("source_record")), new TypeReference<>() {});
+            if ("imported_formal_v1".equals(source.get("archive_kind"))) {
+                run.put("release_checks", List.of(releaseCheck("digest", "发布权重摘要核对"),
+                        releaseCheck("causality", "输出因果性检查（训练归档）"),
+                        releaseCheck("gap", "午夜缺口恢复检查（训练归档）"),
+                        Map.of("check_id", "field_accuracy", "name", "真实现场精度验收", "status", "pending")));
+                run.put("steps", List.of(trainingStep("sample", "样本准备", task.equals("pv_separation") ? "全部构造总开与光伏标签" : "原始总开与分表运行标签"),
+                        trainingStep("clean", "质量筛选", "按日期切分；缺失与午夜窗口掩码"),
+                        trainingStep("feature", "特征构建", "56 电气字段 + 56 有效掩码 + 2 状态通道"),
+                        trainingStep("fit", "离线拟合", "按真实 Epoch 日志归档，未记录阶段时间"),
+                        trainingStep("release", "验证选模", "固定验证集选择 seed 与最佳轮次")));
+            }
+        } catch (JsonProcessingException ignored) { /* Older plain-text archives have no structured metadata. */ }
         return run;
     }
 
@@ -302,7 +329,8 @@ public class SnapshotService {
                         select station_id, event_time, active_power_kw, phase_a_power_kw,
                                phase_b_power_kw, phase_c_power_kw, reactive_power_kvar,
                                voltage, current_ampere as current, power_factor as pf,
-                               coverage_ratio, quality_flag, source_id
+                                coverage_ratio, quality_flag, source_id,
+                                measurement_time, frame_time
                         from main_switch_minute
                         where station_id = :stationId and event_time >= :from and event_time < :to
                         order by event_time asc limit :limit
@@ -314,7 +342,7 @@ public class SnapshotService {
     private List<Map<String, Object>> separationRows(
             String stationId, OffsetDateTime from, OffsetDateTime to, OffsetDateTime visibleAt, int limit) {
         OffsetDateTime realtimeBoundary = visibleAt.minusMinutes(5);
-        return jdbc.sql("""
+        List<Map<String, Object>> results = jdbc.sql("""
                         select r.event_time, r.separation_time,
                           case when r.corrected_pv_kw is not null and b.arrival_time <= :visibleAt then '已反馈校正'
                                when r.event_time >= :realtimeBoundary then '实时初始'
@@ -350,6 +378,41 @@ public class SnapshotService {
                     mapped.put("participating_nodes", List.of());
                     return mapped;
                 }).toList();
+        if (results.isEmpty()) return results;
+
+        // Presentation policy: retain the model's original quality_status, but only
+        // alert for a sustained gap in the main-meter data used by a result.
+        OffsetDateTime first = JdbcValues.offsetDateTime(results.getFirst().get("event_time"));
+        OffsetDateTime last = JdbcValues.offsetDateTime(results.getLast().get("event_time"));
+        Map<Instant, Map<String, Object>> minuteByTime = new HashMap<>();
+        jdbc.sql("""
+                        select event_time, source_id, coverage_ratio, quality_flag
+                        from main_switch_minute
+                        where station_id = :stationId and event_time >= :from and event_time <= :to
+                        """)
+                .param("stationId", stationId).param("from", first.minusMinutes(239))
+                .param("to", last).query().listOfRows()
+                .forEach(minute -> minuteByTime.put(
+                        JdbcValues.offsetDateTime(minute.get("event_time")).toInstant(), minute));
+        for (Map<String, Object> result : results) {
+            Instant target = JdbcValues.offsetDateTime(result.get("event_time")).toInstant();
+            Map<String, Object> targetMinute = minuteByTime.get(target);
+            String targetSource = targetMinute == null ? "" : String.valueOf(targetMinute.get("source_id"));
+            int streak = 0;
+            int longest = 0;
+            for (int offset = 239; offset >= 0; offset--) {
+                Map<String, Object> minute = minuteByTime.get(target.minusSeconds(offset * 60L));
+                boolean present = minute != null
+                        && (!targetSource.startsWith("mqtt:")
+                            || targetSource.equals(String.valueOf(minute.get("source_id"))))
+                        && !"missing".equalsIgnoreCase(String.valueOf(minute.get("quality_flag")))
+                        && ((Number) minute.get("coverage_ratio")).doubleValue() >= 0.999;
+                streak = present ? 0 : streak + 1;
+                longest = Math.max(longest, streak);
+            }
+            result.put("max_consecutive_missing_minutes", longest);
+        }
+        return results;
     }
 
     private List<Map<String, Object>> feedbackBatchRows(
@@ -378,7 +441,8 @@ public class SnapshotService {
         String batchPredicate = batchId == null ? "" : " and p.batch_id = :batchId";
         JdbcClient.StatementSpec query = jdbc.sql("""
                         select p.node_id, p.event_time as period_start, p.period_end, p.arrival_time,
-                               p.batch_id, p.pv_value, p.value_type, p.capacity_kw, p.quality_flag
+                               p.batch_id, p.pv_value, p.value_type, p.capacity_kw, p.quality_flag,
+                               p.measurement_time, p.frame_time
                         from pv_feedback_point p join pv_feedback_batch b on b.batch_id = p.batch_id
                         where p.station_id = :stationId and b.arrival_time <= :at
                         """ + batchPredicate + " order by p.event_time asc").param("stationId", stationId).param("at", at);
@@ -430,12 +494,9 @@ public class SnapshotService {
                         from pv_separation_result where station_id = :stationId and deployment_role = 'active'
                         order by event_time desc limit 1
                         """).param("stationId", stationId).query().listOfRows();
-        String recognitionVersion = state.recognitionVersion() != null
-                ? state.recognitionVersion()
-                : recognitionRows.isEmpty() ? null : String.valueOf(recognitionRows.getFirst().get("model_version"));
-        String separationVersion = state.separationVersion() != null
-                ? state.separationVersion()
-                : separationRows.isEmpty() ? null : String.valueOf(separationRows.getFirst().get("model_version"));
+        Map<String, String> active = activeVersions();
+        String recognitionVersion = active.get("resource_identification");
+        String separationVersion = active.get("pv_separation");
         Object persistedInferenceTime = !separationRows.isEmpty()
                 ? separationRows.getFirst().get("inference_time")
                 : recognitionRows.isEmpty() ? null : recognitionRows.getFirst().get("inference_time");
@@ -450,8 +511,8 @@ public class SnapshotService {
                 ? state.lastInferenceTime() : persistedInferenceTime);
         // An archived model version does not mean a newly connected meter has a complete input window.
         output.put("window_status", !serviceReady ? "delayed"
-                : state.lastInferenceTime() != null ? state.windowStatus()
-                : separationVersion != null ? "ready" : "warming_up");
+                : state.lastInferenceTime() != null && java.util.Objects.equals(separationVersion, state.separationVersion()) ? state.windowStatus()
+                : "warming_up");
         return output;
     }
 

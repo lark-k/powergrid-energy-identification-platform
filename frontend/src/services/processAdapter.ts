@@ -2,10 +2,11 @@ import { SYSTEM_CONFIG } from "../config/system";
 import { snapshotAt } from "../mocks/generator";
 import type { CollectionProcessTelemetry, StationSnapshot, TrainingProcessRun } from "../types/domain";
 import { apiRequest, authHeaders } from "./http";
+import { modelAdapter } from "./modelAdapter";
 
 export interface ProcessDataAdapter {
   getCollectionProcess(stationId: string, at?: Date): Promise<CollectionProcessTelemetry>;
-  getTrainingRuns(stationId: string): Promise<TrainingProcessRun[]>;
+  getTrainingRuns(stationId: string, scope?: "active" | "all"): Promise<TrainingProcessRun[]>;
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void): () => void;
 }
 
@@ -142,8 +143,11 @@ class HttpProcessAdapter implements ProcessDataAdapter {
     return this.request<CollectionProcessTelemetry>(`/api/v1/stations/${encodeURIComponent(stationId)}/process/collection`);
   }
 
-  getTrainingRuns(stationId: string) {
-    return this.request<TrainingProcessRun[]>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs`);
+  async getTrainingRuns(stationId: string, scope: "active" | "all" = "active") {
+    const runs = await this.request<TrainingProcessRun[]>(`/api/v1/stations/${encodeURIComponent(stationId)}/training-runs`);
+    if (scope === "all") return runs;
+    const catalog = await modelAdapter.list();
+    return runs.filter(run => catalog.active[run.model_task] === run.model_version);
   }
 
   connectCollectionStream(stationId: string, onTelemetry: (telemetry: CollectionProcessTelemetry) => void) {

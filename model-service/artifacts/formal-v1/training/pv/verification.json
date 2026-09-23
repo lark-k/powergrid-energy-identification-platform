@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "model_causal": true,
+  "raw_column_poison_test": "PASS",
+  "resource_artifacts_byte_identical": true,
+  "original_protected_files_unchanged": 1508,
+  "replay_minutes": 19661,
+  "checked_predictions": 763,
+  "gap_0015": "PASS",
+  "caveat": "offline constructed scenario uses future observations; NOT an end-to-end real-data causal accuracy test"
+}

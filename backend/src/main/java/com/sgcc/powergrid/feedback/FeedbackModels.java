@@ -19,7 +19,14 @@ public final class FeedbackModels {
             double pvValue,
             @NotBlank String valueType,
             double capacityKw,
-            @NotBlank String qualityFlag) {
+            @NotBlank String qualityFlag,
+            OffsetDateTime measurementTime,
+            OffsetDateTime frameTime) {
+        public Point(String nodeId, OffsetDateTime eventTime, OffsetDateTime periodEnd,
+                double pvValue, String valueType, double capacityKw, String qualityFlag) {
+            this(nodeId, eventTime, periodEnd, pvValue, valueType, capacityKw, qualityFlag, null, null);
+        }
+
         public Point {
             if (eventTime != null && periodEnd != null && !periodEnd.isAfter(eventTime)) {
                 throw new IllegalArgumentException("period_end 必须晚于 event_time");
