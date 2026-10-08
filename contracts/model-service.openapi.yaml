@@ -182,6 +182,8 @@ components:
           type: string
           enum: [good, warning, missing, out_of_order]
         source_id: { type: string, minLength: 1, maxLength: 128 }
+        measurement_time: { type: [string, 'null'], format: date-time, description: Exact original sample time, with timezone. }
+        arrival_time: { type: [string, 'null'], format: date-time, description: Original availability time; live records cannot be available before server receipt. }
         electrical_fields:
           type: object
           description: Measured main-meter electrical fields; formal-v1 consumes the frozen 56-field whitelist. Missing fields stay absent, never inferred from legacy power values.
@@ -198,6 +200,11 @@ components:
         request_id: { type: string, minLength: 1, maxLength: 80 }
         station_id: { type: string, minLength: 1, maxLength: 64 }
         target_time: { type: string, format: date-time }
+        separation_points:
+          type: [array, 'null']
+          maxItems: 10080
+          description: Optional first-arrival raw samples for S4D, isolated from recognition sample-minute points. Empty means unavailable, not fallback.
+          items: { $ref: '#/components/schemas/MinutePoint' }
         points:
           type: array
           minItems: 1
@@ -210,6 +217,10 @@ components:
       properties:
         request_id: { type: string, minLength: 1, maxLength: 80 }
         station_id: { type: string, minLength: 1, maxLength: 64 }
+        separation_points:
+          type: [array, 'null']
+          maxItems: 10080
+          items: { $ref: '#/components/schemas/MinutePoint' }
         target_times:
           type: array
           minItems: 1
@@ -266,6 +277,7 @@ components:
         charger: { $ref: '#/components/schemas/ResourceInference' }
         pv_generation_kw: { type: [number, 'null'], minimum: 0 }
         pv_activity_probability: { type: [number, 'null'], minimum: 0, maximum: 1 }
+        separation_input_power_kw: { type: [number, 'null'], description: Effective MAIN total from the same arrival-minute input as S4D separation; preserves residual-power accounting. }
         inference_time_ms: { type: number, minimum: 0 }
         warnings:
           type: array

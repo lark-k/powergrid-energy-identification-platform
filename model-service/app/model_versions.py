@@ -14,7 +14,7 @@ import torch
 from .config import Settings
 from .runner import CurrentSgccModelRunner, InferenceCoordinator, ModelContractError
 from .schemas import ModelTask
-from .formal_runner import load_runner, FormalModelRunner
+from .formal_runner import load_runner, artifact_digest
 
 
 class ModelSwitchError(RuntimeError):
@@ -61,12 +61,17 @@ class ModelVersions:
                 paths[p] = task
             # Additional artifacts live in task-specific server-managed directories.
             if self.settings.catalog_dir:
-                for p in (self.settings.catalog_dir / task.value).glob("*.pt"):
+                for p in (self.settings.catalog_dir / task.value).rglob("*.pt"):
                     paths[p] = task
+        for p in (bundled.parent / "pv-v3").glob("*.pt"):
+            paths[p] = ModelTask.PV_SEPARATION
         for path, task in paths.items():
             if not path.is_file():
                 continue
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            try:
+                digest = artifact_digest(path)
+            except OSError:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
             prefix = "sgcc-identification" if task == ModelTask.RESOURCE_IDENTIFICATION else "sgcc-pv-separation"
             version = f"{prefix}-{digest[:12]}"
             if version in self._entries:
@@ -83,7 +88,7 @@ class ModelVersions:
                     raise ModelContractError("model weights contain non-finite values")
                 with torch.inference_mode():
                     output = runner._model(torch.zeros(
-                        1, 114 if isinstance(runner, FormalModelRunner) else len(runner._checkpoint["feature_names"]), runner.required_history_minutes,
+                        1, runner.input_channels if hasattr(runner, "input_channels") else len(runner._checkpoint["feature_names"]), runner.required_history_minutes,
                         device=runner.device))
                 tensors = output if isinstance(output, tuple) else (output,)
                 expected = [(1, 3)] if task == ModelTask.RESOURCE_IDENTIFICATION else [(1,), (1,)]

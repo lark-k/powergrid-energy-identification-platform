@@ -60,7 +60,7 @@ public class InferencePipeline {
 
     public void process(String stationId, OffsetDateTime targetTime, String requestId) {
         try {
-            List<Map<String, Object>> rows = measurements.history(stationId, targetTime, 240);
+            List<Map<String, Object>> rows = measurements.history(stationId, targetTime, 244);
             List<ModelServiceDtos.MinutePoint> points = rows.stream().map(row -> new ModelServiceDtos.MinutePoint(
                     String.valueOf(row.get("station_id")),
                     modelTime(JdbcValues.offsetDateTime(row.get("event_time"))),
@@ -73,7 +73,8 @@ public class InferencePipeline {
                     String.valueOf(row.get("source_id")), ElectricalFields.values(row.get("electrical_fields_json")),
                     ElectricalFields.validity(row.get("field_validity_json")))).toList();
             ModelServiceDtos.InferenceRequest inferenceRequest =
-                    new ModelServiceDtos.InferenceRequest(requestId, stationId, modelTime(targetTime), points);
+                    new ModelServiceDtos.InferenceRequest(requestId, stationId, modelTime(targetTime), points,
+                            arrivalPoints(measurements.arrivalBetween(stationId, targetTime.minusMinutes(243), targetTime)));
             ModelServiceDtos.InferenceResult result = modelService.infer(inferenceRequest);
             resultPersistence.save(stationId, targetTime, requestId, rows, result);
             modelService.inferCandidate(inferenceRequest)
@@ -90,6 +91,17 @@ public class InferencePipeline {
 
     static OffsetDateTime modelTime(OffsetDateTime value) {
         return value.withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
+    static List<ModelServiceDtos.MinutePoint> arrivalPoints(List<Map<String, Object>> rows) {
+        return rows.stream().map(row -> new ModelServiceDtos.MinutePoint(
+                String.valueOf(row.get("station_id")),
+                modelTime(JdbcValues.offsetDateTime(row.get("event_time"))).withSecond(0).withNano(0),
+                number(row, "active_power_kw"), number(row, "phase_a_power_kw"),
+                number(row, "phase_b_power_kw"), number(row, "phase_c_power_kw"),
+                number(row, "coverage_ratio"), String.valueOf(row.get("quality_flag")), String.valueOf(row.get("source_id")),
+                ElectricalFields.values(row.get("electrical_fields_json")), ElectricalFields.validity(row.get("field_validity_json")),
+                JdbcValues.offsetDateTime(row.get("measurement_time")), JdbcValues.offsetDateTime(row.get("arrival_time")))).toList();
     }
 
     private void saveShadowComparisons(String stationId, OffsetDateTime targetTime, String requestId,

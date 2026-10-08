@@ -241,6 +241,7 @@ def _infer_targets(body: BatchInferenceRequest, request: Request) -> list[Infere
                 station_id=body.station_id,
                 target_time=target,
                 points=body.points,
+                separation_points=body.separation_points,
             )
         )
         for target in sorted(body.target_times)

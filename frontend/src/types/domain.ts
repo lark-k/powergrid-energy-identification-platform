@@ -120,6 +120,8 @@ export interface TrainingSummary {
   dataset_window_days: number;
   sample_count: number;
   validation_score: number;
+  metric_name?: string;
+  metric_value?: number | null;
   completed_at: string;
 }
 

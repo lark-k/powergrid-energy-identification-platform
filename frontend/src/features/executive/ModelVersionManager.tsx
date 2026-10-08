@@ -4,7 +4,7 @@ import { Archive, Brain, Database, ShieldCheck, SolarPanel } from "@phosphor-ico
 import { SYSTEM_CONFIG } from "../../config/system";
 import { modelAdapter, type ModelTask } from "../../services/modelAdapter";
 import type { StationSnapshot, TrainingProcessRun } from "../../types/domain";
-import { dateText, dateTimeText, percentText } from "../../utils/format";
+import { dateText, percentText } from "../../utils/format";
 
 const tasks: { task: ModelTask; name: string }[] = [
   { task: "resource_identification", name: "资源辨识" },
@@ -14,14 +14,18 @@ const tasks: { task: ModelTask; name: string }[] = [
 const completion = (run?: TrainingProcessRun) => {
   try {
     const source = JSON.parse(run?.source_record ?? "{}");
+    if (source?.completion_time_source === "supplier_delivery_date" && /^\d{4}-\d{2}-\d{2}$/.test(source.completion_date)) {
+      const time = Date.parse(`${source.completion_date}T00:00:00+08:00`);
+      if (Number.isFinite(time)) return { time, date: source.completion_date as string, text: source.completion_date as string };
+    }
     if (source?.completion_time_source === "user_assigned_date" && /^\d{4}-\d{2}-\d{2}$/.test(source.completion_date)) {
       const time = Date.parse(`${source.completion_date}T00:00:00+08:00`);
-      if (Number.isFinite(time)) return { time, date: source.completion_date as string, text: `${source.completion_date}（手动指定）` };
+      if (Number.isFinite(time)) return { time, date: source.completion_date as string, text: source.completion_date as string };
     }
   } catch { /* Older archives may contain plain text. */ }
   const time = run?.completed_at ? Date.parse(run.completed_at) : NaN;
   return Number.isFinite(time)
-    ? { time, date: dateText(run!.completed_at!), text: dateTimeText(run!.completed_at!) }
+    ? { time, date: dateText(run!.completed_at!), text: dateText(run!.completed_at!) }
     : { time: 0, date: "完成日期未记录", text: "未记录" };
 };
 
@@ -64,7 +68,7 @@ export function ModelVersionManager({ runs, snapshot }: { runs: TrainingProcessR
       {live && data && !data.can_manage && <p className="model-operation-message">当前账号可以查看版本，批准和切换需要管理员权限。</p>}
       <div className="active-model-grid">{tasks.map(({ task, name }) => {
         const active = data?.active[task] ?? (live ? "" : task === "pv_separation" ? snapshot.model_health.separation_version : snapshot.model_health.recognition_version) ?? "";
-        const available = (data?.models.filter(model => model.task === task) ?? []).sort((a, b) =>
+        const available = (data?.models.filter(model => model.task === task && runFor(task, model.model_version)) ?? []).sort((a, b) =>
           completion(runFor(task, b.model_version)).time - completion(runFor(task, a.model_version)).time || a.model_version.localeCompare(b.model_version));
         const selected = available.some(model => model.model_version === selection[task]) ? selection[task]! : active;
         const model = available.find(item => item.model_version === selected);
@@ -74,8 +78,8 @@ export function ModelVersionManager({ runs, snapshot }: { runs: TrainingProcessR
         const previous = data?.previous[task];
         return <article key={task} aria-label={`${name}版本管理`}>
           <header>{task === "pv_separation" ? <SolarPanel /> : <Brain />}<span><b>{name}</b><small>{model?.manifest?.model_type ?? task}</small></span><em className={inUse ? "running" : "archived"}>{inUse ? "当前生效" : model?.status === "incompatible" ? "不兼容" : "可选版本"}</em></header>
-          <label className="model-version-picker"><span>选择{name}版本</span><select aria-label={`选择${name}模型版本`} value={selected} disabled={!!pending || !available.length} onChange={event => setSelection(current => ({ ...current, [task]: event.target.value }))}>
-            {available.length ? available.map(item => <option value={item.model_version} key={item.model_version}>{completion(runFor(task, item.model_version)).date} · {item.model_version}{item.model_version === active ? "（当前生效）" : item.status !== "ready" ? "（不兼容）" : item.lifecycle_status !== "approved" ? "（待批准）" : "（可切换）"}</option>) : <option value={active}>{active || "暂无可用版本"}</option>}
+          <label className="model-version-picker"><span>选择{name}版本</span><select aria-label={`选择${name}模型版本`} value={available.some(item => item.model_version === selected) ? selected : ""} disabled={!!pending || !available.length} onChange={event => setSelection(current => ({ ...current, [task]: event.target.value }))}>
+            {available.length ? available.map(item => <option value={item.model_version} key={item.model_version}>{completion(runFor(task, item.model_version)).date} · {item.model_version}{item.model_version === active ? "（当前生效）" : item.status !== "ready" ? "（不兼容）" : item.lifecycle_status !== "approved" ? "（待批准）" : "（可切换）"}</option>) : <option value="">暂无已归档可用版本</option>}
           </select></label>
           <div className="selected-version-summary"><strong>{selected || "等待服务返回版本"}</strong><span className={inUse ? "active" : "archived"}>{inUse ? "当前在用" : model?.lifecycle_status === "approved" ? "已批准" : "未启用"}</span></div>
           {model && <p className="archive-scope">模型文件：{model.artifact_name}</p>}

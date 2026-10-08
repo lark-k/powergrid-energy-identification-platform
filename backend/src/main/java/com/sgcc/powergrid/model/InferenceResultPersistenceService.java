@@ -30,9 +30,14 @@ public class InferenceResultPersistenceService {
             List<Map<String, Object>> rows,
             ModelServiceDtos.InferenceResult result) throws JsonProcessingException {
         OffsetDateTime now = OffsetDateTime.now();
-        String summary = objectMapper.writeValueAsString(Map.of(
+        Map<String, Object> summaryFields = new java.util.LinkedHashMap<>(Map.of(
                 "warnings", result.warnings(),
                 "inference_time_ms", result.inferenceTimeMs()));
+        if (result.separationInputPowerKw() != null) {
+            summaryFields.put("separation_input_power_kw", result.separationInputPowerKw());
+            summaryFields.put("separation_input_time_basis", "arrival_minute");
+        }
+        String summary = objectMapper.writeValueAsString(summaryFields);
         int recognitionInserted = 0;
         boolean recognitionAvailable = result.recognitionModelVersion() != null
                 && result.pv() != null && result.pv().score() != null;
@@ -72,7 +77,7 @@ public class InferenceResultPersistenceService {
         boolean separationAvailable = result.separationModelVersion() != null
                 && result.pvGenerationKw() != null;
         if (separationAvailable) {
-            double totalPower = rows.stream()
+            double totalPower = result.separationInputPowerKw() != null ? result.separationInputPowerKw() : rows.stream()
                     .filter(row -> targetTime.isEqual(JdbcValues.offsetDateTime(row.get("event_time"))))
                     .map(row -> number(row, "active_power_kw")).findFirst()
                     .orElseThrow(() -> new IllegalStateException("Target total power not found"));

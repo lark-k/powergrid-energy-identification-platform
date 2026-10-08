@@ -48,7 +48,7 @@ class InferencePipelineTest {
                 "coverage_ratio", 1.0,
                 "quality_flag", "good",
                 "source_id", "mqtt:test");
-        when(measurements.history("A01", mqttTarget, 240)).thenReturn(List.of(row));
+        when(measurements.history("A01", mqttTarget, 244)).thenReturn(List.of(row));
         when(modelService.infer(any())).thenAnswer(invocation -> {
             ModelServiceDtos.InferenceRequest request = invocation.getArgument(0);
             return new ModelServiceDtos.InferenceResult(

@@ -62,6 +62,7 @@ public class IngestionService {
         OffsetDateTime now = OffsetDateTime.now();
         List<OffsetDateTime> insertedTimes = new ArrayList<>();
         for (MainSwitchMinutePoint point : points) {
+            repository.insertArrivalSample(point, now);
             if (previous != null && point.eventTime().isBefore(previous)) {
                 outOfOrder++;
             }

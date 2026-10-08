@@ -19,6 +19,7 @@ from .schemas import ModelManifest, ModelTask, QualityFlag
 
 
 class FormalModelRunner(CurrentSgccModelRunner):
+    input_channels = 114
     def _load(self, sgcc_project_dir: Path, device_name: str):
         sys.path.insert(0, str(sgcc_project_dir / "energy_device_detection"))
         self._recognition_predict = importlib.import_module("predict")
@@ -137,6 +138,16 @@ class FormalModelRunner(CurrentSgccModelRunner):
 
 
 def load_runner(task, path, sgcc_project_dir, device):
+    if (path.parent / "pv_v3_manifest.json").is_file():
+        from .pv_v3_runner import PVV3ModelRunner
+        return PVV3ModelRunner(task, path, sgcc_project_dir, device)
     short_task = "resource" if task == ModelTask.RESOURCE_IDENTIFICATION else "pv"
     runner_type = FormalModelRunner if (path.parent / f"{short_task}_manifest.json").is_file() else CurrentSgccModelRunner
     return runner_type(task, path, sgcc_project_dir, device)
+
+
+def artifact_digest(path):
+    if (path.parent / "pv_v3_manifest.json").is_file():
+        from .pv_v3_runner import bundle_digest
+        return bundle_digest(path)
+    return hashlib.sha256(path.read_bytes()).hexdigest()

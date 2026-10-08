@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ModelVersionManager } from "../features/executive/ModelVersionManager";
 import { modelAdapter, type ModelCatalog } from "../services/modelAdapter";
-import type { StationSnapshot } from "../types/domain";
+import type { StationSnapshot, TrainingProcessRun } from "../types/domain";
 
 vi.mock("../config/system", () => ({ SYSTEM_CONFIG: { sourceMode: "api" } }));
 vi.mock("../services/modelAdapter", () => ({ modelAdapter: { list: vi.fn(), approve: vi.fn(), activate: vi.fn(), rollback: vi.fn() } }));
@@ -23,7 +23,12 @@ beforeEach(() => {
 afterEach(cleanup);
 function open() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return render(<QueryClientProvider client={client}><ModelVersionManager runs={[]} snapshot={{ model_health: {} } as StationSnapshot} /></QueryClientProvider>);
+  const runs = [
+    { run_id: "resource-old-run", model_task: "resource_identification", model_version: "resource-old" },
+    { run_id: "resource-new-run", model_task: "resource_identification", model_version: "resource-new" },
+    { run_id: "pv-old-run", model_task: "pv_separation", model_version: "pv-old" },
+  ] as TrainingProcessRun[];
+  return render(<QueryClientProvider client={client}><ModelVersionManager runs={runs} snapshot={{ model_health: {} } as StationSnapshot} /></QueryClientProvider>);
 }
 async function selectNew() {
   const panel = screen.getByRole("article", { name: "资源辨识版本管理" });

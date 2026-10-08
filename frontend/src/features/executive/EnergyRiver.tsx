@@ -145,7 +145,7 @@ export function EnergyRiver({ snapshot, activeStage, playbackProgress, reducedMo
         </div>
 
         <button className="journey-node validation-gate" onClick={() => onOpen("validation")}>
-          <span className="hotspot-label"><SealCheck weight="duotone" /><b>{training ? "验证记录就绪" : "等待验证记录"}</b><small>{training ? `得分 ${percentText(training.validation_score)}` : "不生成缺失指标"}</small></span>
+          <span className="hotspot-label"><SealCheck weight="duotone" /><b>{training ? "验证记录就绪" : "等待验证记录"}</b><small>{training ? training.metric_value != null ? `${({ activity_f1: "活动 F1", macro_f1: "Macro F1" } as Record<string, string>)[training.metric_name ?? ""] ?? training.metric_name ?? "得分"} ${training.metric_name?.includes("mae") ? `${training.metric_value.toFixed(4)} kW` : percentText(training.metric_value)}` : `得分 ${percentText(training.validation_score)}` : "不生成缺失指标"}</small></span>
         </button>
 
         <button className={`journey-node deployment-beacon ${modelReady ? "ready" : "degraded"}`} onClick={() => onOpen("management")}>

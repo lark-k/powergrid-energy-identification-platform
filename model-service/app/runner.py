@@ -412,7 +412,8 @@ class InferenceCoordinator:
                 unfilled_minutes = 0
                 try:
                     if hasattr(runner, "infer_points"):
-                        result = runner.infer_points(request.points, request.target_time)
+                        points = request.separation_points if getattr(runner, "uses_arrival_minutes", False) and request.separation_points is not None else request.points
+                        result = runner.infer_points(points, request.target_time)
                     else:
                         frame = self._interpolate(source_frame.copy(), min_coverage_ratio=runner.min_coverage_ratio,
                                                   max_gap_minutes=runner.max_interpolation_gap_minutes)
@@ -490,6 +491,7 @@ class InferenceCoordinator:
             ),
             pv_generation_kw=separation_values.get("pv_generation_kw"),
             pv_activity_probability=separation_values.get("pv_activity_probability"),
+            separation_input_power_kw=separation_values.get("separation_input_power_kw"),
             inference_time_ms=elapsed_ms,
             warnings=list(dict.fromkeys(warnings)),
         )

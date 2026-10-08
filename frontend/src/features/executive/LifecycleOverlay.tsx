@@ -274,7 +274,7 @@ function TrainingPage({ runs, loading, reducedMotion }: { runs: TrainingProcessR
           <div className="run-kpis"><span><small>输入形状</small><strong>{run.window_size_minutes} × {Number(source.input_channels ?? (run.model_task === "pv_separation" ? 7 : 4))}</strong></span><span><small>训练样本</small><strong>{run.sample_count.toLocaleString()}</strong></span><span><small>{metricName(run.metric_name)}</small><strong>{run.metric_value == null ? "—" : percentText(run.metric_value)}</strong></span></div>
           {!!source.evaluation_scope && <p className="archive-scope">{String(source.evaluation_scope)}</p>}
           {source.selected_seed != null && <p className="archive-scope">Seed {String(source.selected_seed)} · 最佳第 {String(source.best_epoch)} 轮 · 耗时 {Number(source.training_seconds).toFixed(2)} 秒{Number(source.auxiliary_sample_count) > 0 ? ` · 辅助预训练 ${Number(source.auxiliary_sample_count).toLocaleString()} 条 / 3 轮（下图为主训练）` : ""}</p>}
-          <footer><span>模型：{String(source.model_name ?? "后台未记录")}</span><span>参数：{typeof source.parameters === "number" ? source.parameters.toLocaleString() : "—"}</span><span>完成：{source.completion_time_source === "user_assigned_date" ? `${String(source.completion_date)}（手动指定）` : run.completed_at ? dateTimeText(run.completed_at) : run.status === "completed" ? "未记录" : "进行中"}</span></footer>
+          <footer><span>模型：{String(source.model_name ?? "后台未记录")}</span><span>参数：{typeof source.parameters === "number" ? source.parameters.toLocaleString() : "—"}</span><span>{source.completion_time_source === "supplier_delivery_date" ? `交付：${String(source.completion_date)}（训练完成时间未记录）` : `完成：${source.completion_time_source === "user_assigned_date" ? `${String(source.completion_date)}（手动指定）` : run.completed_at ? dateTimeText(run.completed_at) : run.status === "completed" ? "未记录" : "进行中"}`}</span></footer>
         </article>;
       }) : <EmptyState text="没有真实 training_run 记录" />}</div>
     </section>
@@ -397,8 +397,8 @@ function EvaluationMetrics({ run }: { run: TrainingProcessRun }) {
   const rows = source.evaluation_metrics as Record<string, string | number | null>[] | undefined;
   if (!Array.isArray(rows)) return null;
   const resource = run.model_task === "resource_identification";
-  const columns = resource ? [["macro_pr_auc", "Macro AP"], ["macro_f1", "Macro F1"], ["EV_f1", "EV F1"]] : [["mae", "MAE / kW"], ["rmse", "RMSE / kW"], ["f1", "活动 F1"]];
-  const names: Record<string, string> = { train: "训练集", validation: "验证集", internal_test: "内部测试", domain_test: "开发域测试" };
+  const columns = resource ? [["macro_pr_auc", "Macro AP"], ["macro_f1", "Macro F1"], ["EV_f1", "EV F1"]] : [["mae", "MAE / kW"], ["rmse", "RMSE / kW"], [source.model_name === "small_s4d" ? "activity_f1" : "f1", "活动 F1"]];
+  const names: Record<string, string> = { train: "训练集", validation: "验证集", internal_test: "内部测试", domain_test: "开发域测试", test: "复用时间留出" };
   return <div className="evaluation-metrics"><table><thead><tr><th>数据划分</th>{columns.map(([key, name]) => <th key={key}>{name}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={String(row.split)}><td>{names[String(row.split)] ?? row.split}</td>{columns.map(([key]) => <td key={key}>{typeof row[key] === "number" ? key === "mae" || key === "rmse" ? Number(row[key]).toFixed(4) : percentText(Number(row[key])) : "—"}</td>)}</tr>)}</tbody></table>{resource && <small>开发域 Macro 仅含 PV / EV；ESS 标签不可用。</small>}</div>;
 }
 

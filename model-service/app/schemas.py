@@ -42,6 +42,15 @@ class MinutePoint(StrictModel):
     source_id: str = Field(min_length=1, max_length=128)
     electrical_fields: dict[str, float | None] = Field(default_factory=dict)
     field_validity: dict[str, bool] = Field(default_factory=dict)
+    measurement_time: datetime | None = None
+    arrival_time: datetime | None = None
+
+    @field_validator("measurement_time", "arrival_time")
+    @classmethod
+    def require_source_timezone(cls, value):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("source times must include a timezone")
+        return value
 
     @field_validator("event_time")
     @classmethod
@@ -58,6 +67,7 @@ class InferenceRequest(StrictModel):
     station_id: str = Field(min_length=1, max_length=64)
     target_time: datetime
     points: list[MinutePoint] = Field(min_length=1, max_length=10080)
+    separation_points: list[MinutePoint] | None = Field(default=None, max_length=10080)
 
     @field_validator("target_time")
     @classmethod
@@ -72,6 +82,8 @@ class InferenceRequest(StrictModel):
     def validate_station_and_unique_times(self) -> "InferenceRequest":
         if any(point.station_id != self.station_id for point in self.points):
             raise ValueError("all points must belong to station_id")
+        if any(point.station_id != self.station_id for point in (self.separation_points or [])):
+            raise ValueError("all separation points must belong to station_id")
         event_times = [point.event_time for point in self.points]
         if len(set(event_times)) != len(event_times):
             raise ValueError("duplicate event_time values are not allowed")
@@ -83,9 +95,12 @@ class BatchInferenceRequest(StrictModel):
     station_id: str = Field(min_length=1, max_length=64)
     target_times: list[datetime] = Field(min_length=1, max_length=5000)
     points: list[MinutePoint] = Field(min_length=1, max_length=10080)
+    separation_points: list[MinutePoint] | None = Field(default=None, max_length=10080)
 
     @model_validator(mode="after")
     def validate_batch(self) -> "BatchInferenceRequest":
+        if any(point.station_id != self.station_id for point in (self.separation_points or [])):
+            raise ValueError("all separation points must belong to station_id")
         if any(point.station_id != self.station_id for point in self.points):
             raise ValueError("all points must belong to station_id")
         if len({point.event_time for point in self.points}) != len(self.points):
@@ -122,6 +137,7 @@ class InferenceResult(StrictModel):
     charger: ResourceInference
     pv_generation_kw: float | None = Field(default=None, ge=0)
     pv_activity_probability: float | None = Field(default=None, ge=0, le=1)
+    separation_input_power_kw: float | None = None
     inference_time_ms: float = Field(ge=0)
     warnings: list[str]
 

@@ -1,0 +1,38 @@
+{
+  "minute_online_inference_pass": true,
+  "replay_points": 15010,
+  "cpu_online_batch_max_difference_kw": 1.1525766012709937e-06,
+  "feature_max_difference": 0.0,
+  "future_feature_prefix_max": 0.0,
+  "causal_deep_checks": [
+    {
+      "method": "tcn_lstm",
+      "future_mutation_prefix_max": 0.0,
+      "pass_check": true
+    },
+    {
+      "method": "small_s4d",
+      "future_mutation_prefix_max": 9.5367431640625e-07,
+      "pass_check": true
+    }
+  ],
+  "midnight_tests": [
+    {
+      "segment": "new_20260920_test_2",
+      "synthetic_midnight_input_test_output": 0.000704529001098346,
+      "recovery_pass": true
+    },
+    {
+      "segment": "new_20260920_validation_1",
+      "synthetic_midnight_input_test_output": 0.0009487662573716901,
+      "recovery_pass": true
+    }
+  ],
+  "latency": {
+    "median_ms": 5.009800000152609,
+    "p95_ms": 7.131240000944671,
+    "maximum_ms": 16.641700000036508,
+    "n": 15010,
+    "scope": "CPU end-to-end all chosen ensemble members, preprocessing+history+inference; 4threads"
+  }
+}

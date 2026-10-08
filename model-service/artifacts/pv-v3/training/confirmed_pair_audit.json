@@ -1,0 +1,23 @@
+{
+  "pair_confirmed": true,
+  "new_main_device": "202601230004",
+  "new_pv_device": "202601230001",
+  "excluded": [
+    "202607230032",
+    "202607230025"
+  ],
+  "raw_hashes_unchanged": true,
+  "dataset_identical_to_prior": true,
+  "normalizer_identical_to_prior": true,
+  "new_main_all_56_fields_match_raw_04": true,
+  "new_observed_targets_match_raw_01": true,
+  "rows": 85008,
+  "new_rows": 24733,
+  "electrical_fields": 56,
+  "input_channels": 116,
+  "regular_minute_axis": true,
+  "split_before_windows": true,
+  "preprocessing": "main past-only hold<=3min; PV interpolation only TRAIN weak supervision; metrics observed quality-valid only",
+  "timing": "main report-time minute; PV sample-time minute; completed-minute decisions, no nearest join",
+  "note": "032/025 were already absent from prior training. This is independent retraining, not a corrected label mixture."
+}

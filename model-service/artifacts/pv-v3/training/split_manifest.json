@@ -1,0 +1,76 @@
+{
+  "segments": [
+    {
+      "segment": "new_20260920_train_0",
+      "batch": "new_20260920",
+      "split": "train",
+      "start": "2026-09-20 13:05:00",
+      "end": "2026-09-25 23:59:00",
+      "rows": 7855
+    },
+    {
+      "segment": "new_20260920_validation_1",
+      "batch": "new_20260920",
+      "split": "validation",
+      "start": "2026-09-26 04:00:00",
+      "end": "2026-10-03 23:59:00",
+      "rows": 11280
+    },
+    {
+      "segment": "new_20260920_test_2",
+      "batch": "new_20260920",
+      "split": "test",
+      "start": "2026-10-04 04:00:00",
+      "end": "2026-10-07 17:17:00",
+      "rows": 5118
+    },
+    {
+      "segment": "old_20251125_train_0",
+      "batch": "old_20251125",
+      "split": "train",
+      "start": "2025-11-25 11:17:00",
+      "end": "2025-12-03 14:21:00",
+      "rows": 11705
+    },
+    {
+      "segment": "old_20251203_train_0",
+      "batch": "old_20251203",
+      "split": "train",
+      "start": "2025-12-03 15:23:00",
+      "end": "2025-12-12 09:39:00",
+      "rows": 12617
+    },
+    {
+      "segment": "old_20260109_train_0",
+      "batch": "old_20260109",
+      "split": "train",
+      "start": "2026-01-09 15:40:00",
+      "end": "2026-01-20 13:24:00",
+      "rows": 15705
+    },
+    {
+      "segment": "old_20260128_train_0",
+      "batch": "old_20260128",
+      "split": "train",
+      "start": "2026-01-30 14:55:00",
+      "end": "2026-02-10 15:02:00",
+      "rows": 15848
+    },
+    {
+      "segment": "old_20260210_train_0",
+      "batch": "old_20260210",
+      "split": "train",
+      "start": "2026-02-10 15:16:00",
+      "end": "2026-02-13 16:35:00",
+      "rows": 4400
+    }
+  ],
+  "window": 240,
+  "buffer_minutes": 240,
+  "new_train": "2026-09-20 through 2026-09-25",
+  "new_validation": "2026-09-26 04:00 through 2026-10-03",
+  "new_holdout": "2026-10-04 04:00 through 2026-10-07 17:17",
+  "auxiliary": "all old raw dates; former old test is development training, never external",
+  "holdout_status": "previously inspected new batch; re-used chronological adaptation holdout, NOT independent external",
+  "validation_limitation": "only Sep26 genuinely generating date, peak below TRAIN Sep25 and holdout Oct7; limited date diversity"
+}

@@ -126,14 +126,15 @@ public class MeasurementRepository {
         List<Map<String, Object>> rows = jdbc.sql("""
                         select station_id, event_time, active_power_kw,
                                phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
-                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
+                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json,
+                               measurement_time, frame_time
                         from main_switch_minute
                         where station_id = :stationId and event_time <= :targetTime
                           and event_time >= :windowStart
                           and (source_id = (select source_id from main_switch_minute
-                                where station_id = :stationId and event_time = :targetTime)
+                                where station_id = :stationId and event_time <= :targetTime order by event_time desc limit 1)
                             or (select source_id from main_switch_minute
-                                where station_id = :stationId and event_time = :targetTime) not like 'mqtt:%')
+                                where station_id = :stationId and event_time <= :targetTime order by event_time desc limit 1) not like 'mqtt:%')
                         order by event_time desc limit :limit
                         """)
                 .param("stationId", stationId)
@@ -150,7 +151,8 @@ public class MeasurementRepository {
         return jdbc.sql("""
                         select station_id, event_time, active_power_kw,
                                phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
-                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
+                               coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json,
+                               measurement_time, frame_time
                         from main_switch_minute
                         where station_id = :stationId
                           and event_time >= :fromInclusive
@@ -195,6 +197,53 @@ public class MeasurementRepository {
                 String.valueOf(row.get("quality_flag")),
                 String.valueOf(row.get("source_id")), ElectricalFields.values(row.get("electrical_fields_json")),
                 ElectricalFields.validity(row.get("field_validity_json"))));
+    }
+
+    public void insertArrivalSample(MainSwitchMinutePoint point, OffsetDateTime receivedAt) {
+        if ("missing".equals(point.qualityFlag())) return;
+        OffsetDateTime measurement = point.measurementTime() == null ? point.eventTime() : point.measurementTime();
+        OffsetDateTime available = point.frameTime() == null ? point.eventTime() : point.frameTime();
+        if (point.sourceId().startsWith("mqtt:") && available.isBefore(receivedAt)) available = receivedAt;
+        jdbc.sql("""
+                insert into main_switch_arrival_sample (
+                  station_id, source_id, measurement_time, arrival_time, received_at,
+                  active_power_kw, phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
+                  coverage_ratio, quality_flag, electrical_fields_json, field_validity_json
+                ) select :station, :source, :measurement, :arrival, :received,
+                  :total, :a, :b, :c, :coverage, :quality, :electrical, :validity
+                where not exists (select 1 from main_switch_arrival_sample
+                  where station_id=:station and source_id=:source and measurement_time=:measurement)
+                """)
+                .param("station", point.stationId()).param("source", point.sourceId())
+                .param("measurement", measurement).param("arrival", available).param("received", receivedAt)
+                .param("total", point.activePowerKw()).param("a", point.phaseAPowerKw())
+                .param("b", point.phaseBPowerKw()).param("c", point.phaseCPowerKw())
+                .param("coverage", point.coverageRatio()).param("quality", point.qualityFlag())
+                .param("electrical", ElectricalFields.json(point.electricalFields()))
+                .param("validity", ElectricalFields.json(point.fieldValidity())).update();
+    }
+
+    /** All first-arrival samples, before last-arrival-per-minute selection in the S4D adapter. */
+    public List<Map<String, Object>> arrivalBetween(String stationId, OffsetDateTime from, OffsetDateTime to) {
+        return jdbc.sql("""
+                select station_id, measurement_time as event_time, measurement_time, arrival_time,
+                       active_power_kw, phase_a_power_kw, phase_b_power_kw, phase_c_power_kw,
+                       coverage_ratio, quality_flag, source_id, electrical_fields_json, field_validity_json
+                from main_switch_arrival_sample
+                where station_id=:station and arrival_time < :decision
+                  and source_id=(select source_id from main_switch_arrival_sample
+                    where station_id=:station and arrival_time < :decision order by arrival_time desc limit 1)
+                  and (arrival_time >= :from or arrival_time=(select max(arrival_time) from main_switch_arrival_sample
+                    where station_id=:station and arrival_time < :from and source_id=(select source_id from main_switch_arrival_sample
+                      where station_id=:station and arrival_time < :decision order by arrival_time desc limit 1)))
+                order by arrival_time, measurement_time
+                """).param("station", stationId).param("from", from).param("decision", to.plusMinutes(1))
+                .query().listOfRows();
+    }
+
+    public List<String> recentlyArrivingStations(OffsetDateTime since, OffsetDateTime decision) {
+        return jdbc.sql("select distinct station_id from main_switch_arrival_sample where arrival_time >= :since and arrival_time < :decision")
+                .param("since", since).param("decision", decision).query(String.class).list();
     }
 
     public void incrementQuality(String stationId, int duplicates, int outOfOrder, int warnings) {

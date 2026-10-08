@@ -1,0 +1,9 @@
+{
+  "schema": "pv-v3-adapter.v1",
+  "delivery_date": "2026-10-08",
+  "sha256": {
+    "manifest.json": "af26517c0959fa0a1dde13bfef6ad9c2215d164ede9dc8ddc2e6901328669461",
+    "normalizer.json": "d22197c6dca2ad2ff28490f1c8ce100bc766edab805214bdf5c13105c94a54bc",
+    "seed_3407_best_validation.pt": "22e0e39ed0d0a9ff4f50597caadc25c5a0e4dca8d4d3677eb3c843c5caf699fc"
+  }
+}

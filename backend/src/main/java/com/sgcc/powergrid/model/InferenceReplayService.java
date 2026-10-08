@@ -27,7 +27,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Service
 public class InferenceReplayService {
     private static final int TARGET_CHUNK_SIZE = 300;
-    private static final int REQUIRED_HISTORY_MINUTES = 240;
+    private static final int REQUIRED_HISTORY_MINUTES = 244;
     private static final long MAX_RANGE_DAYS = 31;
 
     private final JdbcClient jdbc;
@@ -154,7 +154,8 @@ public class InferenceReplayService {
                 try {
                     List<ModelServiceDtos.InferenceResult> results = modelService.replay(
                             new ModelServiceDtos.BatchInferenceRequest(
-                                    event.requestId(), event.stationId(), chunk, toPoints(rows)));
+                                    event.requestId(), event.stationId(), chunk, toPoints(rows),
+                                    InferencePipeline.arrivalPoints(measurements.arrivalBetween(event.stationId(), historyStart, chunk.getLast()))));
                     if (results.size() != chunk.size()) {
                         throw new IllegalStateException("model replay result count does not match target count");
                     }
